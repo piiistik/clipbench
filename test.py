@@ -1,3 +1,3 @@
-from clipet.ui.cli.cli import main
+from clipex.ui.cli.cli import main
 
 main()

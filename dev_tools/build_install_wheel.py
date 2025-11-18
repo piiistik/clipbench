@@ -16,7 +16,7 @@ def build_and_install():
 
     # Step 3: Extract versions and pick the highest
     def parse_version_from_filename(filename):
-        # Example filename: clipet-0.0.1-py3-none-any.whl
+        # Example filename: clipex-0.0.1-py3-none-any.whl
         base = os.path.basename(filename)
         parts = base.split('-')
         try:
