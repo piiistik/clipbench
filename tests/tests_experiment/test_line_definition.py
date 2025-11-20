@@ -4,6 +4,7 @@ from clipex.experiment.variable.float_var import FloatVar
 from clipex.experiment.variable.string_list_var import StringListVar, StringListType
 from clipex.experiment.variable.toggleable_string_var import ToggleableStringVar
 
+
 def test_line_definition_build_and_get_line():
     builder = LineDefinitionBuilder()
     builder.add_static_part("echo")
@@ -15,7 +16,7 @@ def test_line_definition_build_and_get_line():
     builder.add_variable(variable_str_list)
     variable_toggle = ToggleableStringVar("OPTION")
     builder.add_variable(variable_toggle)
-    
+
     line_definition = builder.build()
 
     line1 = line_definition.get_line((0, 0, 0, 0))
