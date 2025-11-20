@@ -36,7 +36,7 @@ class LineDefinition:
         for i, variable_line_index in enumerate(self.__variable_line_indexes):
             self.__line_template[variable_line_index] = variable_strings[i]
 
-        return "".join(self.__line_template)
+        return " ".join(self.__line_template).strip()
 
     def get_variable_ranges(self) -> Tuple[Tuple[int, int]]:
         return self.__variable_collection.get_ranges()

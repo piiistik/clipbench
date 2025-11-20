@@ -1,6 +1,6 @@
 from clipex.experiment.variable.float_var import FloatVar
 from clipex.experiment.variable.int_var import IntVar
-from clipex.experiment.variable.toggleable_string import ToggleableStringVar
+from clipex.experiment.variable.toggleable_string_var import ToggleableStringVar
 from clipex.experiment.variable.string_list_var import StringListType, StringListVar
 
 from pytest import approx

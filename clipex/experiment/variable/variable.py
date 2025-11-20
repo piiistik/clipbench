@@ -7,8 +7,7 @@ class VariableType(Enum):
     INTEGER = 1
     FLOAT = 2
     STRING_LIST = 3
-    TOGGLEABLE_STRING = 4
-
+    TOGGLEABLE_STRING = 4    
 
 class Variable(ABC):
     @abstractmethod
