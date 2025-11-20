@@ -1,47 +1,51 @@
-from typing import List, Dict, Tuple
+from typing import List, Tuple
 
-from clipex.experiment.variable import Variable
+from clipex.experiment.variable.variable import Variable
+from clipex.experiment.variable_collection import VariableCollection
 
 
 VariableStr = str
-VariablePosition = int
+VariableValueIndex = int
 
 
 class LineDefinition:
     __line_template: List[str | VariableStr] = []
-    __variable_map: Dict[VariablePosition, Variable] = {}
+    __variable_collection: VariableCollection
+    __variable_line_indexes: List[int] = []
 
     def __init__(
         self,
-        line_template: List[str | VariableStr] = None,
-        variable_map: Dict[VariablePosition, Variable] = None,
+        line_template: List[str | VariableStr],
+        variable_collection: VariableCollection,
+        variable_line_indexes: List[int],
     ):
         self.__line_template = line_template
-        self.__variable_map = variable_map
+        self.__variable_collection = variable_collection
+        self.__variable_line_indexes = variable_line_indexes
 
-    def get_line(self, variables: Dict[VariablePosition, int]) -> str:
-        for position, indexed_value in variables.items():
-            self.__set_variable(position, indexed_value)
+    def get_line(self, variable_value_indexes: Tuple[VariableValueIndex]) -> str:
+        if len(variable_value_indexes) != len(self.__variable_line_indexes):
+            raise ValueError(
+                "Variable value indexes length must match variable line indexes length"
+            )
+
+        variable_strings = self.__variable_collection.get_strings_from_indexes(
+            variable_value_indexes
+        )
+
+        for i, variable_line_index in enumerate(self.__variable_line_indexes):
+            self.__line_template[variable_line_index] = variable_strings[i]
 
         return "".join(self.__line_template)
 
-    def get_variable_ranges(self) -> Dict[VariablePosition, Tuple[int, int]]:
-        ranges = {}
-        for position, variable in self.__variable_map.items():
-            ranges[position] = variable.get_index_range()
-        return ranges
-
-    def __set_variable(self, position: VariablePosition, indexed_value: int):
-        variable = self.__variable_map.get(position)
-        if variable is None:
-            raise ValueError(f"No variable found at line position {position}")
-
-        self.__line_template[position] = variable.get_string_from_index(indexed_value)
+    def get_variable_ranges(self) -> Tuple[Tuple[int, int]]:
+        return self.__variable_collection.get_ranges()
 
 
 class LineDefinitionBuilder:
     __line_template: List[str | VariableStr] = []
-    __variable_map: Dict[VariablePosition, Variable] = {}
+    __variables: List[Variable] = []
+    __variable_line_indexes: List[int] = []
 
     def add_static_part(self, static_part: str):
         self.__line_template.append(static_part)
@@ -49,8 +53,13 @@ class LineDefinitionBuilder:
     def add_variable(self, variable: Variable):
         position = len(self.__line_template)
         self.__line_template.append("")
-        self.__variable_map[position] = variable
+        self.__variable_line_indexes.append(position)
+        self.__variables.append(variable)
 
     def build(self) -> LineDefinition:
-        line_definition = LineDefinition(self.__line_template, self.__variable_map)
+        line_definition = LineDefinition(
+            self.__line_template,
+            VariableCollection(tuple(self.__variables)),
+            self.__variable_line_indexes,
+        )
         return line_definition

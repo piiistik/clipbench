@@ -9,7 +9,7 @@ SearchSpace = List[Tuple[Variables, float | None]]
 class SearchMethod(ABC):
     _variable_ranges: Ranges
 
-    def __init__(self, variable_ranges: List[Tuple[int, int]]):
+    def __init__(self, variable_ranges: Tuple[Tuple[int, int]]):
         super().__init__()
 
         self._variable_ranges = variable_ranges
