@@ -1,11 +1,12 @@
 from itertools import product
+from typing import Tuple
 
 
 from clipex.core.search_method.search_method import SearchMethod, SearchSpace
 
 
 class Exhaustive(SearchMethod):
-    def __init__(self, variable_ranges):
+    def __init__(self, variable_ranges: Tuple[Tuple[int, int]]):
         super().__init__(variable_ranges)
 
     def step(self, _) -> SearchSpace:
