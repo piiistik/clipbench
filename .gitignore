@@ -6,3 +6,4 @@ dist/
 *.whl
 __pycache__/
 *NOTE*
+.vscode/

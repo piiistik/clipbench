@@ -4,3 +4,4 @@ black
 
 # dependencies
 kivy
+scipy
