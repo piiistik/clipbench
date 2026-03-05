@@ -1,4 +1,4 @@
-from clipbench.core.search_method.grid_sample import GridSearchMethod
+from clipbench.core.search_method.grid_sample import GridSample
 from clipbench.experiment.experiment import Experiment
 from clipbench.core.evaluator import Evaluator
 from clipbench.experiment.command_builder import CommandBuilder
@@ -24,13 +24,23 @@ def test_grid_sample():
     experiment = Experiment(command_builder, variable_handler)
     evaluator = Evaluator(experiment, SimpleRunner(), search_space)
 
-    grid_method = GridSearchMethod()
+    grid_method = GridSample()
 
     grid_method.run(
         experiment.get_search_space_definition(), search_space, evaluator, budget=budget
     )
 
     print(search_space)
-    
+
     assert len(search_space) <= 10
-    assert list(search_space.keys()) == [(0, 0), (0, 10), (0, 20), (5, 0), (5, 10), (5, 20), (10, 0), (10, 10), (10, 20)]
+    assert list(search_space.keys()) == [
+        (0, 0),
+        (0, 10),
+        (0, 20),
+        (5, 0),
+        (5, 10),
+        (5, 20),
+        (10, 0),
+        (10, 10),
+        (10, 20),
+    ]

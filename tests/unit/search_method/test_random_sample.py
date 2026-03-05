@@ -1,4 +1,4 @@
-from clipbench.core.search_method.random_sample import RandomSearchMethod
+from clipbench.core.search_method.random_sample import RandomSample
 from clipbench.experiment.experiment import Experiment
 from clipbench.core.evaluator import Evaluator
 from clipbench.experiment.command_builder import CommandBuilder
@@ -24,13 +24,10 @@ def test_random_sample():
     experiment = Experiment(command_builder, variable_handler)
     evaluator = Evaluator(experiment, SimpleRunner(), search_space)
 
-    random_method = RandomSearchMethod()
+    random_method = RandomSample()
 
     random_method.run(
         experiment.get_search_space_definition(), search_space, evaluator, budget=budget
     )
-    
+
     assert len(search_space) == 10
-
-
-

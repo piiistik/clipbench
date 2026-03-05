@@ -1,6 +1,8 @@
 # clipbench
 cli program benchmarker
 
+expressions v experiment def
+
 ## Installation Workflows
 
 ### 1. Basic Setup (End Users)

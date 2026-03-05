@@ -1,10 +1,13 @@
 _REGISTRY = {}
 
+
 def register(name):
     def _decorator(factory):
         _REGISTRY[name] = factory
         return factory
+
     return _decorator
+
 
 def get_registered_instance(configuration: dict):
     try:

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Parts>
+    <Static>
+        .\bin\sleep.exe
+    </Static>
+    
+    <Dynamic>
+        <Int min="10" max="100" step="1"/>
+    </Dynamic>
+
+    <Dynamic>
+        <Int min="10" max="100" step="1"/>
+    </Dynamic>
+</Parts>

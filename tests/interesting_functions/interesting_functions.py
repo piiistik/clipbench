@@ -1,5 +1,7 @@
 from typing import Tuple
 import math
+import time
+import sys
 
 
 def square_with_minima(pt: Tuple[int, int]) -> float:
@@ -363,3 +365,71 @@ def complex_landscape_with_curved_cliff(pt: Tuple[int, int]) -> float:
     value += 1e-7 * (x - y)
 
     return float(max(value, EPS))
+
+
+def main():
+    """
+    Main wrapper function that:
+    1. Takes function name and two integers from command line
+    2. Calls the appropriate function with those integers
+    3. Sleeps for the result (in milliseconds) to simulate execution time
+
+    Usage: python interesting_functions.py <function_name> <int1> <int2>
+    """
+    if len(sys.argv) != 4:
+        print("Usage: python interesting_functions.py <function_name> <int1> <int2>")
+        print("\nAvailable functions:")
+        print("  - square_with_minima")
+        print("  - square_with_maxima")
+        print("  - cliff_ridge")
+        print("  - cliff_step")
+        print("  - combine_minima_with_ridge")
+        print("  - combine_maxima_with_ridge")
+        print("  - combine_minima_with_step")
+        print("  - combine_maxima_with_step")
+        print("  - curved_cliff")
+        print("  - complex_landscape_with_curved_cliff")
+        sys.exit(1)
+
+    function_name = sys.argv[1]
+    try:
+        x = int(sys.argv[2])
+        y = int(sys.argv[3])
+    except ValueError:
+        print("Error: Arguments must be integers")
+        sys.exit(1)
+
+    # Dictionary mapping function names to actual functions
+    functions = {
+        "square_with_minima": square_with_minima,
+        "square_with_maxima": square_with_maxima,
+        "cliff_ridge": cliff_ridge,
+        "cliff_step": cliff_step,
+        "combine_minima_with_ridge": combine_minima_with_ridge,
+        "combine_maxima_with_ridge": combine_maxima_with_ridge,
+        "combine_minima_with_step": combine_minima_with_step,
+        "combine_maxima_with_step": combine_maxima_with_step,
+        "curved_cliff": curved_cliff,
+        "complex_landscape_with_curved_cliff": complex_landscape_with_curved_cliff,
+    }
+
+    if function_name not in functions:
+        print(f"Error: Unknown function '{function_name}'")
+        print("\nAvailable functions:")
+        for name in functions.keys():
+            print(f"  - {name}")
+        sys.exit(1)
+
+    # Call the selected function
+    result = functions[function_name]((x, y))
+
+    # Sleep for result milliseconds
+    sleep_time_seconds = result / 1000.0
+    time.sleep(sleep_time_seconds)
+    print(sleep_time_seconds)
+
+    sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()

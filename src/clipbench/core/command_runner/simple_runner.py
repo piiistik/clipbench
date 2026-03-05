@@ -35,6 +35,9 @@ class SimpleRunner(CommandRunner):
             / self.__iterations
         )
 
+
 @register("simple_runner")
 def factory_simple_runner(configuration: dict) -> SimpleRunner:
-    return SimpleRunner(configuration.get("iterations", 10), configuration.get("iteration_timeout", 10))
+    return SimpleRunner(
+        configuration.get("iterations", 10), configuration.get("iteration_timeout", 10)
+    )

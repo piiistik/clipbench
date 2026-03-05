@@ -24,7 +24,7 @@ class GridSample(SearchMethod):
         grid_points = self._build_grid(space_definition, budget)
 
         if grid_points:
-            print(f"Evaluating {len(grid_points)} grid points {grid_points}")
+            print(f"Evaluating {len(grid_points)} grid points...")
             evaluator.evaluate(grid_points)
 
     def _build_grid(
@@ -46,6 +46,7 @@ class GridSample(SearchMethod):
 
         grid_points = list(itertools.product(*grid_axes))
         return grid_points[:budget]
+
 
 @register("grid_sample")
 def factory_grid_sample(_: dict) -> GridSample:
