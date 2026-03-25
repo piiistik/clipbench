@@ -1,0 +1,9 @@
+{
+    "command_runner_configuration": {
+        "name": "c_runner"
+    },
+    "search_method_configuration": {
+        "name": "grid_sample"
+    },
+    "budget": 1024
+}

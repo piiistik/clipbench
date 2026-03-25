@@ -3,17 +3,17 @@ from clipbench.configuration.configuration import Configuration
 from clipbench.core.evaluator import Evaluator
 
 from clipbench.core.search_space import SearchSpace
-from clipbench.core.registry import get_registered_instance
+from clipbench.core.registry import get_registered_instance_of_command_runner, get_registered_instance_of_search_method
 from clipbench.core.command_runner.command_runner import CommandRunner
 from clipbench.core.search_method.search_method import SearchMethod
 
 
 class Executor:
     def __init__(self, configuration: Configuration):
-        self._command_runner: CommandRunner = get_registered_instance(
+        self._command_runner: CommandRunner = get_registered_instance_of_command_runner(
             configuration.command_runner_configuration
         )
-        self._search_method: SearchMethod = get_registered_instance(
+        self._search_method: SearchMethod = get_registered_instance_of_search_method(
             configuration.search_method_configuration
         )
         self._budget = configuration.budget

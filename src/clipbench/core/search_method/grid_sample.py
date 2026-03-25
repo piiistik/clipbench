@@ -4,7 +4,10 @@ from clipbench.core.search_method.search_method import SearchMethod
 from clipbench.core.search_space import VariableVector, SearchSpace, SpaceDefinition
 
 from clipbench.core.evaluator import Evaluator
-from clipbench.core.registry import register
+from clipbench.core.registry import (
+    register_search_method as register_instance,
+    register_search_method_configuration as register_configuration,
+)
 
 
 class GridSample(SearchMethod):
@@ -48,6 +51,11 @@ class GridSample(SearchMethod):
         return grid_points[:budget]
 
 
-@register("grid_sample")
+@register_configuration("grid_sample")
+def configuration_grid_sample() -> dict:
+    return {}
+
+
+@register_instance("grid_sample")
 def factory_grid_sample(_: dict) -> GridSample:
     return GridSample()

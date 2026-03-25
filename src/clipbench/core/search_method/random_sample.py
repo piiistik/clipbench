@@ -4,8 +4,10 @@ from typing import Optional
 from clipbench.core.search_method.search_method import SearchMethod
 from clipbench.core.search_space import VariableVector, SpaceDefinition, SearchSpace
 from clipbench.core.evaluator import Evaluator
-from clipbench.core.registry import register
-
+from clipbench.core.registry import (
+    register_search_method as register_instance,
+    register_search_method_configuration as register_configuration,
+)
 
 class RandomSample(SearchMethod):
     """
@@ -14,7 +16,7 @@ class RandomSample(SearchMethod):
 
     def __init__(
         self,
-        random_seed: Optional[int] = None,
+        random_seed: Optional[int],
     ):
         self._generator = random.Random(random_seed)
 
@@ -40,6 +42,18 @@ class RandomSample(SearchMethod):
         return vector
 
 
-@register("random_sample")
+@register_instance("random_sample")
 def factory_random_sample(configuration: dict) -> RandomSample:
-    return RandomSample(configuration.get("random_seed", None))
+    default_seed = configuration_random_sample()["random_seed"]["default"]
+    return RandomSample(configuration.get("random_seed", default_seed))
+
+
+@register_configuration("random_sample")
+def configuration_random_sample() -> dict:
+    return {
+        "random_seed": {
+            "type": "int",
+            "description": "Seed for random number generator",
+            "default": None,
+        }
+    }

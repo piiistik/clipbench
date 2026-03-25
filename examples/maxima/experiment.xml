@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Parts>
+    <Static>
+        powershell .\tests\examples\maxima.ps1
+    </Static>
+    
+    <Dynamic>
+        <Int min="0" max="1000" step="1"/>
+    </Dynamic>
+
+    <Dynamic>
+        <Int min="0" max="1000" step="1"/>
+    </Dynamic>
+</Parts>

@@ -2,7 +2,10 @@ from typing import List
 from clipbench.core.command_runner.command_runner import CommandRunner
 import subprocess
 import timeit
-from clipbench.core.registry import register
+from clipbench.core.registry import (
+    register_command_runner as register_instance,
+    register_command_runner_configuration as register_configuration,
+)
 
 
 # timeit runs subprocess multiple times and returns avg time
@@ -36,8 +39,26 @@ class SimpleRunner(CommandRunner):
         )
 
 
-@register("simple_runner")
+@register_configuration("simple_runner")
+def configuration_simple_runner() -> dict:
+    return {
+        "iterations": {
+            "type": "int",
+            "description": "Number of iterations to run each command for timing",
+            "default": 10,
+        },
+        "iteration_timeout": {
+            "type": "int",
+            "description": "Timeout in seconds for each individual command execution",
+            "default": 10,
+        },
+    }
+
+
+@register_instance("simple_runner")
 def factory_simple_runner(configuration: dict) -> SimpleRunner:
+    default_iterations = configuration_simple_runner()["iterations"]["default"]
+    default_iteration_timeout = configuration_simple_runner()["iteration_timeout"]["default"]
     return SimpleRunner(
-        configuration.get("iterations", 10), configuration.get("iteration_timeout", 10)
+        configuration.get("iterations", default_iterations), configuration.get("iteration_timeout", default_iteration_timeout)
     )

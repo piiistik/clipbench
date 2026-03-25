@@ -1,4 +1,8 @@
-from clipbench.core.registry import register
+from clipbench.core.registry import (
+    register_command_runner as register_instance,
+    register_command_runner_configuration as register_configuration,
+)
+
 from clipbench.core.command_runner.command_runner import CommandRunner
 
 import subprocess
@@ -101,6 +105,18 @@ class CRunner(CommandRunner):
         return results
 
 
-@register("c_runner")
+@register_configuration("c_runner")
+def configuration_c_runner() -> dict:
+    return {
+        "timeout": {
+            "type": "float",
+            "description": "Optional timeout in seconds for single batch of commands (number and size of batches is unknown in advance)",
+            "default": None,
+        }
+    }
+
+
+@register_instance("c_runner")
 def factory_c_runner(configuration: dict) -> CRunner:
-    return CRunner()
+    default_timeout = configuration_c_runner()["timeout"]["default"]
+    return CRunner(configuration.get("timeout", default_timeout))

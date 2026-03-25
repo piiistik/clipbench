@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Two File Editor</title>
+  <style>
+    :root {
+      --bg: #f7f7fb;
+      --panel: #ffffff;
+      --border: #d9dbe7;
+      --text: #1f2430;
+      --muted: #667085;
+      --accent: #4f46e5;
+      --accent-2: #eef2ff;
+      --danger: #b42318;
+      --shadow: 0 10px 28px rgba(16, 24, 40, 0.08);
+      --radius: 14px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    header {
+      background: linear-gradient(135deg, #1f2937, #111827);
+      color: #fff;
+      padding: 18px 24px;
+      box-shadow: var(--shadow);
+    }
+
+    header h1 {
+      margin: 0 0 6px;
+      font-size: 22px;
+    }
+
+    header p {
+      margin: 0;
+      color: #cbd5e1;
+      font-size: 14px;
+    }
+
+    .app {
+      max-width: 1300px;
+      margin: 20px auto;
+      padding: 0 16px 24px;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .tabs {
+      display: inline-flex;
+      gap: 8px;
+      padding: 6px;
+      background: rgba(255,255,255,0.6);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      box-shadow: var(--shadow);
+    }
+
+    .tab-btn {
+      border: none;
+      background: transparent;
+      padding: 10px 16px;
+      border-radius: 999px;
+      cursor: pointer;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .tab-btn.active {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .panel {
+      display: none;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    .panel.active { display: block; }
+
+    .panel-header {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .panel-header h2 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    .file-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    button, .btn {
+      border: 1px solid transparent;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font: inherit;
+      cursor: pointer;
+      background: #eef2ff;
+      color: #3730a3;
+      font-weight: 600;
+    }
+
+    button.primary, .btn.primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    button.ghost, .btn.ghost {
+      background: #fff;
+      border-color: var(--border);
+      color: var(--text);
+    }
+
+    button.danger {
+      background: #fff1f0;
+      color: var(--danger);
+      border-color: #fecdca;
+    }
+
+    button.small {
+      padding: 6px 10px;
+      font-size: 13px;
+      border-radius: 8px;
+    }
+
+    input[type="text"], input[type="number"], textarea, select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font: inherit;
+      background: #fff;
+      color: var(--text);
+    }
+
+    textarea {
+      min-height: 110px;
+      resize: vertical;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 8px;
+    }
+
+    .status {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      white-space: pre-wrap;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 940px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    .group {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      background: #fcfcff;
+    }
+
+    .group h3 {
+      margin: 0 0 12px;
+      font-size: 16px;
+    }
+
+    .field {
+      margin-bottom: 12px;
+    }
+
+    .field label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+    }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      align-items: start;
+    }
+
+    @media (max-width: 780px) {
+      .field-row { grid-template-columns: 1fr; }
+    }
+
+    .block-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .blocks {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .block {
+      border: 1px solid var(--border);
+      border-left: 5px solid var(--accent);
+      border-radius: 14px;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .block-header {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      background: var(--accent-2);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .block-header strong {
+      font-size: 14px;
+    }
+
+    .block-body {
+      padding: 14px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .block-footer {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 0 14px 14px;
+    }
+
+    .inline {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .inline > * { flex: 1 1 140px; }
+    .inline .tight { flex: 0 0 auto; }
+
+    .dropzone {
+      border: 2px dashed #c7d2fe;
+      background: #f8faff;
+      border-radius: 14px;
+      padding: 16px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .separator {
+      height: 1px;
+      background: var(--border);
+      margin: 16px 0;
+    }
+
+    .readonly-box {
+      min-height: 180px;
+      background: #0b1020;
+      color: #d1d5db;
+      border-radius: 14px;
+      padding: 14px;
+      overflow: auto;
+      white-space: pre-wrap;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      border: 1px solid #111827;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Two File Editor</h1>
+    <p>Load, edit, and download a JSON configuration file or an XML command-definition file.</p>
+  </header>
+
+  <div class="app">
+    <div class="toolbar">
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="configTab">Configuration editor</button>
+        <button class="tab-btn" data-tab="commandTab">Command definition editor</button>
+      </div>
+      <div class="inline">
+        <span class="hint">Supported: local file load, edit, and download.</span>
+      </div>
+    </div>
+
+    <section id="configTab" class="panel active">
+      <div class="panel-header">
+        <h2>Configuration</h2>
+        <div class="file-actions">
+          <label class="btn ghost" for="configFileInput">Load JSON</label>
+          <input id="configFileInput" type="file" accept=".json,application/json" hidden />
+          <button class="primary" id="downloadConfigBtn">Download JSON</button>
+          <button class="ghost" id="resetConfigBtn">Reset example</button>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="group">
+          <h3>Structured editor</h3>
+          <div id="configForm"></div>
+        </div>
+        <div class="group">
+          <h3>Current JSON</h3>
+          <div id="configPreview" class="readonly-box"></div>
+          <div class="hint">This preview updates as you edit the form.</div>
+        </div>
+      </div>
+
+      <div id="configStatus" class="status">No file loaded. Using the example configuration.</div>
+    </section>
+
+    <section id="commandTab" class="panel">
+      <div class="panel-header">
+        <h2>Command definition</h2>
+        <div class="file-actions">
+          <label class="btn ghost" for="commandFileInput">Load XML</label>
+          <input id="commandFileInput" type="file" accept=".xml,text/xml,application/xml" hidden />
+          <button class="primary" id="downloadCommandBtn">Download XML</button>
+          <button class="ghost" id="resetCommandBtn">Reset example</button>
+        </div>
+      </div>
+
+      <div class="block-controls">
+        <button class="primary" id="addStaticBtn">Add Static block</button>
+        <button class="primary" id="addDynamicBtn">Add Dynamic block</button>
+      </div>
+
+      <div class="grid">
+        <div class="group">
+          <h3>Block editor</h3>
+          <div id="blocksContainer" class="blocks"></div>
+        </div>
+        <div class="group">
+          <h3>Current XML</h3>
+          <div id="xmlPreview" class="readonly-box"></div>
+          <div class="hint">The XML preview is generated from the current block order and values.</div>
+        </div>
+      </div>
+
+      <div id="commandStatus" class="status">No file loaded. Using the example command definition.</div>
+    </section>
+  </div>
+
+  <script>
+    // You can expand these schema objects later.
+    const CONFIG_SCHEMA = {
+      command_runner_configuration: {
+        name: "str"
+      },
+      search_method_configuration: {
+        name: "str"
+      },
+      budget: "int"
+    };
+
+    const DYNAMIC_SCHEMA = {
+      Int: {
+        min: "int",
+        max: "int",
+        step: "int"
+      },
+      Float: {
+        min: "float",
+        max: "float",
+        accuracy: "float"
+      },
+    };
+
+    const DEFAULT_CONFIG = {
+      command_runner_configuration: {
+        name: "c_runner"
+      },
+      search_method_configuration: {
+        name: "grid_sample"
+      },
+      budget: 1024
+    };
+
+    const DEFAULT_COMMAND = [
+      { kind: "Static", text: "powershell .\\your_powershell_script.ps1" },
+      { kind: "Dynamic", dynamicType: "Int", attrs: { min: 0, max: 1000, step: 1 } },
+      { kind: "Dynamic", dynamicType: "Float", attrs: { min: 0.0, max: 100.0, accuracy: 0.01 } }
+    ];
+
+    let configState = deepClone(DEFAULT_CONFIG);
+    let commandState = deepClone(DEFAULT_COMMAND);
+
+    const configFormEl = document.getElementById("configForm");
+    const configPreviewEl = document.getElementById("configPreview");
+    const configStatusEl = document.getElementById("configStatus");
+    const commandContainerEl = document.getElementById("blocksContainer");
+    const xmlPreviewEl = document.getElementById("xmlPreview");
+    const commandStatusEl = document.getElementById("commandStatus");
+
+    function deepClone(obj) {
+      return JSON.parse(JSON.stringify(obj));
+    }
+
+    function escapeXml(text) {
+      return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&apos;");
+    }
+
+    function prettyJson(value) {
+      return JSON.stringify(value, null, 2);
+    }
+
+    function setStatus(el, message, isError = false) {
+      el.textContent = message;
+      el.style.color = isError ? "#b42318" : "var(--muted)";
+      el.style.background = isError ? "#fff5f5" : "#f8fafc";
+      el.style.borderColor = isError ? "#fecdca" : "var(--border)";
+    }
+
+    function renderTabs() {
+      document.querySelectorAll(".tab-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+          document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+          btn.classList.add("active");
+          document.getElementById(btn.dataset.tab).classList.add("active");
+        });
+      });
+    }
+
+    function buildConfigForm() {
+      configFormEl.innerHTML = "";
+
+      Object.entries(CONFIG_SCHEMA).forEach(([sectionName, schema]) => {
+        const section = document.createElement("div");
+        section.className = "group";
+        section.style.marginBottom = "14px";
+
+        const title = document.createElement("h3");
+        title.textContent = sectionName;
+        section.appendChild(title);
+
+        if (typeof schema === "string") {
+          section.appendChild(createTypedField([sectionName], schema, getValueByPath(configState, [sectionName])));
+        } else {
+          Object.entries(schema).forEach(([fieldName, type]) => {
+            section.appendChild(createTypedField([sectionName, fieldName], type, getValueByPath(configState, [sectionName, fieldName])));
+          });
+        }
+
+        configFormEl.appendChild(section);
+      });
+
+      configPreviewEl.textContent = prettyJson(configState);
+    }
+
+    function createTypedField(path, type, value) {
+      const wrapper = document.createElement("div");
+      wrapper.className = "field";
+
+      const label = document.createElement("label");
+      label.textContent = path.join(".") + ` (${type})`;
+      wrapper.appendChild(label);
+
+      const input = document.createElement(type === "int" ? "input" : "input");
+      input.type = type === "int" ? "number" : "text";
+      if (type === "int") input.step = "1";
+      input.value = value ?? "";
+      input.addEventListener("input", () => {
+        setValueByPath(configState, path, type === "int" ? parseMaybeInt(input.value) : input.value);
+        configPreviewEl.textContent = prettyJson(configState);
+      });
+      wrapper.appendChild(input);
+      return wrapper;
+    }
+
+    function parseMaybeInt(value) {
+      if (value === "") return null;
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? Math.trunc(parsed) : null;
+    }
+
+    function getValueByPath(obj, path) {
+      return path.reduce((acc, key) => (acc && acc[key] !== undefined ? acc[key] : undefined), obj);
+    }
+
+    function setValueByPath(obj, path, value) {
+      let current = obj;
+      for (let i = 0; i < path.length - 1; i++) {
+        const key = path[i];
+        if (current[key] === undefined || current[key] === null || typeof current[key] !== "object") {
+          current[key] = {};
+        }
+        current = current[key];
+      }
+      current[path[path.length - 1]] = value;
+    }
+
+    function syncConfigFromForm() {
+      configPreviewEl.textContent = prettyJson(configState);
+    }
+
+    function renderCommandEditor() {
+      commandContainerEl.innerHTML = "";
+
+      if (!commandState.length) {
+        const empty = document.createElement("div");
+        empty.className = "dropzone";
+        empty.textContent = "No blocks yet. Add Static or Dynamic blocks above.";
+        commandContainerEl.appendChild(empty);
+      }
+
+      commandState.forEach((block, index) => {
+        const card = document.createElement("div");
+        card.className = "block";
+
+        const header = document.createElement("div");
+        header.className = "block-header";
+
+        const left = document.createElement("div");
+        left.className = "inline";
+
+        const title = document.createElement("strong");
+        title.textContent = `Block ${index + 1}`;
+        left.appendChild(title);
+
+        const kindSelect = document.createElement("select");
+        kindSelect.className = "tight";
+        ["Static", "Dynamic"].forEach(opt => {
+          const option = document.createElement("option");
+          option.value = opt;
+          option.textContent = opt;
+          if (block.kind === opt) option.selected = true;
+          kindSelect.appendChild(option);
+        });
+        kindSelect.addEventListener("change", () => {
+          if (kindSelect.value === "Static") {
+            commandState[index] = { kind: "Static", text: block.text || "" };
+          } else {
+            commandState[index] = {
+              kind: "Dynamic",
+              dynamicType: block.dynamicType || "Int",
+              attrs: deepClone(defaultAttrsForType(block.dynamicType || "Int"))
+            };
+          }
+          renderCommandEditor();
+        });
+        left.appendChild(kindSelect);
+
+        if (block.kind === "Dynamic") {
+          const dynamicType = document.createElement("select");
+          dynamicType.className = "tight";
+          Object.keys(DYNAMIC_SCHEMA).forEach(typeName => {
+            const option = document.createElement("option");
+            option.value = typeName;
+            option.textContent = typeName;
+            if ((block.dynamicType || "Int") === typeName) option.selected = true;
+            dynamicType.appendChild(option);
+          });
+          dynamicType.addEventListener("change", () => {
+            commandState[index].dynamicType = dynamicType.value;
+            commandState[index].attrs = deepClone(defaultAttrsForType(dynamicType.value));
+            renderCommandEditor();
+          });
+          left.appendChild(dynamicType);
+        }
+
+        header.appendChild(left);
+
+        const controls = document.createElement("div");
+        controls.className = "inline";
+
+        const upBtn = makeSmallButton("Move up", () => moveBlock(index, index - 1));
+        const downBtn = makeSmallButton("Move down", () => moveBlock(index, index + 1));
+        const duplicateBtn = makeSmallButton("Duplicate", () => duplicateBlock(index));
+        const deleteBtn = makeSmallButton("Delete", () => deleteBlock(index), true);
+
+        controls.append(upBtn, downBtn, duplicateBtn, deleteBtn);
+        header.appendChild(controls);
+
+        const body = document.createElement("div");
+        body.className = "block-body";
+
+        if (block.kind === "Static") {
+          const field = document.createElement("div");
+          field.className = "field";
+          const label = document.createElement("label");
+          label.textContent = "Static text";
+          field.appendChild(label);
+
+          const textarea = document.createElement("textarea");
+          textarea.value = block.text || "";
+          textarea.addEventListener("input", () => {
+            commandState[index].text = textarea.value;
+            updateXmlPreview();
+          });
+          field.appendChild(textarea);
+          body.appendChild(field);
+        } else {
+          const dynSchema = DYNAMIC_SCHEMA[block.dynamicType || "Int"] || DYNAMIC_SCHEMA.Int;
+          Object.entries(dynSchema).forEach(([attrName, attrType]) => {
+            const field = document.createElement("div");
+            field.className = "field";
+            const label = document.createElement("label");
+            label.textContent = `${attrName} (${attrType})`;
+            field.appendChild(label);
+
+            const input = document.createElement("input");
+            input.type = attrType === "int" ? "number" : "text";
+            if (attrType === "int") input.step = "1";
+            input.value = block.attrs?.[attrName] ?? "";
+            input.addEventListener("input", () => {
+              if (!commandState[index].attrs) commandState[index].attrs = {};
+              commandState[index].attrs[attrName] = attrType === "int" ? parseMaybeInt(input.value) : input.value;
+              updateXmlPreview();
+            });
+            field.appendChild(input);
+            body.appendChild(field);
+          });
+        }
+
+        const footer = document.createElement("div");
+        footer.className = "block-footer";
+        footer.appendChild(makeSmallButton("Insert Static after", () => insertBlock(index + 1, { kind: "Static", text: "" })));
+        footer.appendChild(makeSmallButton("Insert Dynamic after", () => insertBlock(index + 1, { kind: "Dynamic", dynamicType: "Int", attrs: deepClone(defaultAttrsForType("Int")) })));
+
+        card.appendChild(header);
+        card.appendChild(body);
+        card.appendChild(footer);
+        commandContainerEl.appendChild(card);
+      });
+
+      updateXmlPreview();
+    }
+
+    function makeSmallButton(text, handler, isDanger = false) {
+      const button = document.createElement("button");
+      button.className = `small ${isDanger ? "danger" : "ghost"}`;
+      button.textContent = text;
+      button.addEventListener("click", handler);
+      return button;
+    }
+
+    function moveBlock(fromIndex, toIndex) {
+      if (toIndex < 0 || toIndex >= commandState.length) return;
+      const item = commandState.splice(fromIndex, 1)[0];
+      commandState.splice(toIndex, 0, item);
+      renderCommandEditor();
+    }
+
+    function duplicateBlock(index) {
+      const item = deepClone(commandState[index]);
+      commandState.splice(index + 1, 0, item);
+      renderCommandEditor();
+    }
+
+    function deleteBlock(index) {
+      commandState.splice(index, 1);
+      renderCommandEditor();
+    }
+
+    function insertBlock(index, block) {
+      commandState.splice(index, 0, block);
+      renderCommandEditor();
+    }
+
+    function defaultAttrsForType(typeName) {
+      return deepClone(DYNAMIC_SCHEMA[typeName] || DYNAMIC_SCHEMA.Int);
+    }
+
+    function updateXmlPreview() {
+      xmlPreviewEl.textContent = commandToXml(commandState);
+    }
+
+    function commandToXml(blocks) {
+      const lines = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<Parts>'
+      ];
+
+      blocks.forEach(block => {
+        if (block.kind === "Static") {
+          lines.push(`  <Static>${escapeXml(block.text || "")}</Static>`);
+        } else {
+          const typeName = block.dynamicType || "Int";
+          const attrs = block.attrs || {};
+          const attrString = Object.entries(attrs)
+            .map(([k, v]) => `${k}="${escapeXml(v ?? "")}"`)
+            .join(" ");
+          lines.push(`  <Dynamic>`);
+          lines.push(`    <${typeName}${attrString ? " " + attrString : ""}/>`);
+          lines.push(`  </Dynamic>`);
+        }
+      });
+
+      lines.push('</Parts>');
+      return lines.join('\n');
+    }
+
+    function xmlToCommandState(xmlText) {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(xmlText, "application/xml");
+      const parseError = doc.querySelector("parsererror");
+      if (parseError) {
+        throw new Error("Invalid XML file.");
+      }
+
+      const parts = doc.querySelector("Parts");
+      if (!parts) {
+        throw new Error("XML must contain a <Parts> root element.");
+      }
+
+      const blocks = [];
+      Array.from(parts.children).forEach(node => {
+        if (node.tagName === "Static") {
+          blocks.push({ kind: "Static", text: node.textContent || "" });
+        } else if (node.tagName === "Dynamic") {
+          const child = node.firstElementChild;
+          if (!child) return;
+          const dynamicType = child.tagName;
+          const attrs = {};
+          Array.from(child.attributes).forEach(attr => {
+            attrs[attr.name] = attr.value;
+          });
+          blocks.push({ kind: "Dynamic", dynamicType, attrs });
+        }
+      });
+      return blocks;
+    }
+
+    function configToDownloadBlob() {
+      return new Blob([prettyJson(configState) + "\n"], { type: "application/json" });
+    }
+
+    function commandToDownloadBlob() {
+      return new Blob([commandToXml(commandState) + "\n"], { type: "application/xml" });
+    }
+
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    function initConfigHandlers() {
+      document.getElementById("configFileInput").addEventListener("change", async (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        try {
+          const text = await file.text();
+          const parsed = JSON.parse(text);
+          configState = parsed;
+          buildConfigForm();
+          setStatus(configStatusEl, `Loaded configuration file: ${file.name}`);
+        } catch (err) {
+          setStatus(configStatusEl, `Could not load JSON: ${err.message}`, true);
+        }
+        e.target.value = "";
+      });
+
+      document.getElementById("downloadConfigBtn").addEventListener("click", () => {
+        downloadBlob(configToDownloadBlob(), "configuration.json");
+        setStatus(configStatusEl, "Downloaded current configuration as JSON.");
+      });
+
+      document.getElementById("resetConfigBtn").addEventListener("click", () => {
+        configState = deepClone(DEFAULT_CONFIG);
+        buildConfigForm();
+        setStatus(configStatusEl, "Reset to the example configuration.");
+      });
+    }
+
+    function initCommandHandlers() {
+      document.getElementById("commandFileInput").addEventListener("change", async (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        try {
+          const text = await file.text();
+          commandState = xmlToCommandState(text);
+          renderCommandEditor();
+          setStatus(commandStatusEl, `Loaded command definition file: ${file.name}`);
+        } catch (err) {
+          setStatus(commandStatusEl, `Could not load XML: ${err.message}`, true);
+        }
+        e.target.value = "";
+      });
+
+      document.getElementById("downloadCommandBtn").addEventListener("click", () => {
+        downloadBlob(commandToDownloadBlob(), "command-definition.xml");
+        setStatus(commandStatusEl, "Downloaded current command definition as XML.");
+      });
+
+      document.getElementById("resetCommandBtn").addEventListener("click", () => {
+        commandState = deepClone(DEFAULT_COMMAND);
+        renderCommandEditor();
+        setStatus(commandStatusEl, "Reset to the example command definition.");
+      });
+
+      document.getElementById("addStaticBtn").addEventListener("click", () => {
+        commandState.push({ kind: "Static", text: "" });
+        renderCommandEditor();
+      });
+
+      document.getElementById("addDynamicBtn").addEventListener("click", () => {
+        commandState.push({ kind: "Dynamic", dynamicType: "Int", attrs: deepClone(defaultAttrsForType("Int")) });
+        renderCommandEditor();
+      });
+    }
+
+    function boot() {
+      renderTabs();
+      initConfigHandlers();
+      initCommandHandlers();
+      buildConfigForm();
+      renderCommandEditor();
+      setStatus(configStatusEl, "No file loaded. Using the example configuration.");
+      setStatus(commandStatusEl, "No file loaded. Using the example command definition.");
+    }
+
+    boot();
+  </script>
+</body>
+</html>

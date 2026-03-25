@@ -5,7 +5,10 @@ from typing import Optional, Tuple, Dict, List
 from clipbench.core.search_method.search_method import SearchMethod
 from clipbench.core.search_space import VariableVector, SpaceDefinition, SearchSpace
 from clipbench.core.evaluator import Evaluator
-from clipbench.core.registry import register
+from clipbench.core.registry import (
+    register_search_method as register_instance,
+    register_search_method_configuration as register_configuration,
+)
 
 
 class MinMaxSearch(SearchMethod):
@@ -234,7 +237,7 @@ class MinMaxSearch(SearchMethod):
         return current, budget
 
 
-@register("min_max_search")
+@register_instance("min_max_search")
 def factory_min_max_search(configuration: dict) -> MinMaxSearch:
     return MinMaxSearch(
         random_seed=configuration.get("random_seed", None),
@@ -245,3 +248,8 @@ def factory_min_max_search(configuration: dict) -> MinMaxSearch:
         mode=configuration.get("mode", "both"),
         neighbor_radius=configuration.get("neighbor_radius", 1),
     )
+
+
+@register_configuration("min_max_search")
+def configuration_min_max_search() -> dict:
+    return {}
