@@ -11,6 +11,10 @@ from importlib import resources
 from typing import List, Optional
 
 
+NON_SUCCESS_SENTINEL = 1e9
+OVERHEAD_CALIBRATION_COMMAND = "echo"
+
+
 def _get_cmd_runner_path():
     """
     Return the absolute path to the packaged cmd_runner executable.
@@ -33,16 +37,35 @@ def write_commands_to_file(commands: List[str], filepath: str):
 
 
 class CRunner(CommandRunner):
-    def __init__(self, timeout: Optional[float] = None):
+    def __init__(
+        self,
+        timeout: Optional[float] = None,
+        timeout_seconds: Optional[float] = None,
+        overhead_measurement_runs: int = 0,
+    ):
         super().__init__()
+        # Outer timeout for the whole batch communication.
         self._timeout = timeout
+        # Per-command timeout enforced by cmd_runner itself.
+        self._timeout_seconds = timeout_seconds
+        if overhead_measurement_runs < 0:
+            raise ValueError("overhead_measurement_runs must be >= 0")
+        self._overhead_measurement_runs = overhead_measurement_runs
+        self._command_overhead: Optional[float] = None
 
-    def run(self, commands: list[str]) -> list[float]:
+    def _execute_batch(self, commands: list[str]) -> list[float]:
         """
-        Run a list of shell commands via the cmd_runner binary and return a list of floats.
+        Run commands through cmd_runner and return parsed results.
         """
+        if not commands:
+            return []
+
         # Resolve installed cmd_runner executable
         runner_path = _get_cmd_runner_path()
+
+        runner_command = [runner_path]
+        if self._timeout_seconds is not None:
+            runner_command.append(str(self._timeout_seconds))
 
         # Prepare stdin payload (one command per line)
         stdin_payload = "\n".join(commands)
@@ -51,7 +74,7 @@ class CRunner(CommandRunner):
 
         try:
             proc = subprocess.Popen(
-                [runner_path],
+                runner_command,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
@@ -94,15 +117,74 @@ class CRunner(CommandRunner):
 
         results: List[float] = []
         for i, ln in enumerate(out_lines):
-            try:
-                results.append(float(ln))
-            except ValueError as e:
-                raise ValueError(
-                    f"Could not parse output line {i} as float: {ln!r}. "
-                    f"Full stdout: {stdout!r}"
-                ) from e
+            if ln == "TIMEOUT":
+                results.append(NON_SUCCESS_SENTINEL)
+                continue
+
+            if ln.startswith("ERROR"):
+                results.append(NON_SUCCESS_SENTINEL)
+                continue
+
+            if ln.startswith("OK "):
+                value_text = ln[3:].strip()
+                try:
+                    results.append(float(value_text))
+                except ValueError as e:
+                    raise ValueError(
+                        f"Could not parse OK value on output line {i}: {ln!r}. "
+                        f"Full stdout: {stdout!r}"
+                    ) from e
+                continue
+
+            raise ValueError(
+                f"Unknown cmd_runner status line {i}: {ln!r}. "
+                f"Expected 'OK <float>', 'TIMEOUT', or 'ERROR <reason>'. "
+                f"Stdout: {stdout!r} Stderr: {stderr!r}"
+            )
 
         return results
+
+    def _ensure_command_overhead(self) -> None:
+        """
+        Measure and cache average per-command overhead using simple echo commands.
+        """
+        if self._command_overhead is not None:
+            return
+
+        if self._overhead_measurement_runs == 0:
+            self._command_overhead = 0.0
+            return
+
+        calibration_commands = [OVERHEAD_CALIBRATION_COMMAND] * self._overhead_measurement_runs
+        calibration_results = self._execute_batch(calibration_commands)
+        valid_results = [value for value in calibration_results if value != NON_SUCCESS_SENTINEL]
+
+        if not valid_results:
+            raise RuntimeError(
+                "Failed to measure c_runner overhead: all calibration commands failed"
+            )
+
+        self._command_overhead = sum(valid_results) / len(valid_results)
+
+    def run(self, commands: list[str]) -> list[float]:
+        """
+        Run a list of shell commands via the cmd_runner binary and return a list of floats.
+        """
+        if not commands:
+            return []
+
+        self._ensure_command_overhead()
+        command_results = self._execute_batch(commands)
+        command_overhead = self._command_overhead if self._command_overhead is not None else 0.0
+
+        adjusted_results: List[float] = []
+        for value in command_results:
+            if value == NON_SUCCESS_SENTINEL:
+                adjusted_results.append(value)
+            else:
+                adjusted_results.append(max(0.0, value - command_overhead))
+
+        return adjusted_results
 
 
 @register_configuration("c_runner")
@@ -110,13 +192,32 @@ def configuration_c_runner() -> dict:
     return {
         "timeout": {
             "type": "float",
-            "description": "Optional timeout in seconds for single batch of commands (number and size of batches is unknown in advance)",
+            "description": "Optional timeout in seconds for whole cmd_runner batch communication.",
             "default": None,
-        }
+        },
+        "timeout_seconds": {
+            "type": "float",
+            "description": "Optional timeout in seconds for each command executed by cmd_runner.",
+            "default": None,
+        },
+        "overhead_measurement_runs": {
+            "type": "int",
+            "description": "Number of lightweight echo commands used to estimate and subtract c_runner command overhead.",
+            "default": 0,
+        },
     }
 
 
 @register_instance("c_runner")
 def factory_c_runner(configuration: dict) -> CRunner:
-    default_timeout = configuration_c_runner()["timeout"]["default"]
-    return CRunner(configuration.get("timeout", default_timeout))
+    defaults = configuration_c_runner()
+    default_timeout = defaults["timeout"]["default"]
+    default_timeout_seconds = defaults["timeout_seconds"]["default"]
+    default_overhead_measurement_runs = defaults["overhead_measurement_runs"]["default"]
+    return CRunner(
+        timeout=configuration.get("timeout", default_timeout),
+        timeout_seconds=configuration.get("timeout_seconds", default_timeout_seconds),
+        overhead_measurement_runs=configuration.get(
+            "overhead_measurement_runs", default_overhead_measurement_runs
+        ),
+    )

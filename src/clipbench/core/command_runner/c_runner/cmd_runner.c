@@ -1,381 +1,453 @@
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 
 #ifdef _WIN32
 #include <windows.h>
 
-static HANDLE shell_stdin_w = NULL;
-static HANDLE shell_stdout_r = NULL;
-static HANDLE shell_stderr_r = NULL;
-static PROCESS_INFORMATION shell_pi = {0};
+#define MAX_CMD_LEN 4096
+#define CHUNK_SIZE 4096
+#define CAPTURE_MAX 65536
 
-int send_command_to_shell(const char *cmd) {
-    if (!shell_stdin_w) return -1;
-    DWORD written = 0;
-    DWORD len = (DWORD)strlen(cmd);
-    fprintf(stderr, "[debug] send_command_to_shell: writing %u bytes cmd=\"%s\"\n", (unsigned)len, cmd);
-    fflush(stderr);
-    if (!WriteFile(shell_stdin_w, cmd, len, &written, NULL) || written != len) {
-        fprintf(stderr, "[debug] send_command_to_shell: WriteFile failed or short write (%u/%u)\n", (unsigned)written, (unsigned)len);
-        fflush(stderr);
-        return -1;
-    }
-    if (!WriteFile(shell_stdin_w, "\r\n", 2, &written, NULL) || written != 2) {
-        fprintf(stderr, "[debug] send_command_to_shell: WriteFile CRLF failed\n");
-        fflush(stderr);
-        return -1;
-    }
-    fprintf(stderr, "[debug] send_command_to_shell: written and flushed\n");
-    fflush(stderr);
-    return 0;
+typedef enum {
+    CMD_STATUS_OK = 0,
+    CMD_STATUS_TIMEOUT = 1,
+    CMD_STATUS_ERROR = 2,
+} CommandStatus;
+
+typedef struct {
+    HANDLE stdin_write;
+    HANDLE stdout_read;
+    HANDLE stderr_read;
+    PROCESS_INFORMATION pi;
+} PersistentShell;
+
+typedef struct {
+    CommandStatus status;
+    double elapsed_seconds;
+    int exit_code;
+    char reason[128];
+    char stderr_text[CAPTURE_MAX];
+    char stdout_tail[CAPTURE_MAX];
+} CommandResult;
+
+static void init_result(CommandResult *result) {
+    result->status = CMD_STATUS_ERROR;
+    result->elapsed_seconds = 0.0;
+    result->exit_code = -1;
+    result->reason[0] = '\0';
+    result->stderr_text[0] = '\0';
+    result->stdout_tail[0] = '\0';
 }
 
-int read_shell_output_line(char *buf, size_t buflen) {
-    if (!shell_stdout_r) return -1;
-    DWORD read = 0;
-    size_t pos = 0;
-    while (pos + 1 < buflen) {
-        char ch;
-        BOOL ok = ReadFile(shell_stdout_r, &ch, 1, &read, NULL);
-        if (!ok || read == 0) {
-            if (pos == 0) return -1;
-            break;
-        }
-        buf[pos++] = ch;
-        if (ch == '\n') break;
+static double now_seconds(void) {
+    static LARGE_INTEGER freq;
+    static int has_freq = 0;
+    LARGE_INTEGER counter;
+
+    if (!has_freq) {
+        QueryPerformanceFrequency(&freq);
+        has_freq = 1;
     }
-    buf[pos] = '\0';
-    return (int)pos;
+
+    QueryPerformanceCounter(&counter);
+    return (double)counter.QuadPart / (double)freq.QuadPart;
 }
 
-int drain_one_pipe_named(HANDLE h) {
-    if (!h) return 0;
-    DWORD avail = 0;
-    char tmp[8192];
-    DWORD total = 0;
-    for (;;) {
-        if (!PeekNamedPipe(h, NULL, 0, NULL, &avail, NULL)) return -1;
-        if (avail == 0) break;
-        DWORD toread = avail > sizeof(tmp) ? (DWORD)sizeof(tmp) : avail;
-        DWORD read = 0;
-        if (!ReadFile(h, tmp, toread, &read, NULL)) return -1;
-        if (read == 0) break;
-        total += read;
+static void append_capped(char *dst, size_t dst_size, const char *src, size_t src_len) {
+    size_t dst_len;
+    size_t keep;
+
+    if (dst_size == 0 || src_len == 0) {
+        return;
     }
-    return (int)total;
+
+    dst_len = strlen(dst);
+    if (src_len >= dst_size) {
+        src += (src_len - (dst_size - 1));
+        src_len = dst_size - 1;
+        dst[0] = '\0';
+        dst_len = 0;
+    }
+
+    if (dst_len + src_len >= dst_size) {
+        keep = dst_size - 1 - src_len;
+        memmove(dst, dst + (dst_len - keep), keep);
+        dst[keep] = '\0';
+        dst_len = keep;
+    }
+
+    memcpy(dst + dst_len, src, src_len);
+    dst[dst_len + src_len] = '\0';
 }
 
-int drain_shell_output(void) {
-    int a = drain_one_pipe_named(shell_stdout_r);
-    int b = drain_one_pipe_named(shell_stderr_r);
-    if (a < 0 || b < 0) return -1;
-    fprintf(stderr, "[debug] drain_shell_output: drained stdout=%d stderr=%d bytes\n", a, b);
-    fflush(stderr);
-    return a + b;
-}
+static int find_marker_exit_code(const char *text, const char *marker, int *exit_code) {
+    const char *start;
+    const char *colon;
+    char *endptr;
+    long code;
 
-int init_persistent_shell(void) {
-    SECURITY_ATTRIBUTES sa = { sizeof(SECURITY_ATTRIBUTES), NULL, TRUE };
-    HANDLE stdin_r = NULL;
-    HANDLE stdout_w = NULL;
-    HANDLE stderr_w = NULL;
-    if (!CreatePipe(&stdin_r, &shell_stdin_w, &sa, 0)) return -1;
-    if (!CreatePipe(&shell_stdout_r, &stdout_w, &sa, 0)) {
-        CloseHandle(stdin_r); CloseHandle(shell_stdin_w);
-        return -1;
-    }
-    if (!CreatePipe(&shell_stderr_r, &stderr_w, &sa, 0)) {
-        CloseHandle(stdin_r); CloseHandle(shell_stdin_w);
-        CloseHandle(shell_stdout_r); CloseHandle(stdout_w);
-        return -1;
-    }
-    SetHandleInformation(shell_stdin_w, HANDLE_FLAG_INHERIT, 0);
-    SetHandleInformation(shell_stdout_r, HANDLE_FLAG_INHERIT, 0);
-    SetHandleInformation(shell_stderr_r, HANDLE_FLAG_INHERIT, 0);
-
-    STARTUPINFOA si;
-    ZeroMemory(&si, sizeof(si));
-    si.cb = sizeof(si);
-    si.hStdInput = stdin_r;
-    si.hStdOutput = stdout_w;
-    si.hStdError = stderr_w;
-    si.dwFlags |= STARTF_USESTDHANDLES;
-
-    char cmdline[] = "cmd.exe /Q"; // /Q for no echo
-    BOOL ok = CreateProcessA(NULL, cmdline, NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &shell_pi);
-    CloseHandle(stdin_r);
-    CloseHandle(stdout_w);
-    CloseHandle(stderr_w);
-    if (!ok) {
-        if (shell_stdin_w) CloseHandle(shell_stdin_w);
-        if (shell_stdout_r) CloseHandle(shell_stdout_r);
-        if (shell_stderr_r) CloseHandle(shell_stderr_r);
-        shell_stdin_w = NULL;
-        shell_stdout_r = NULL;
-        shell_stderr_r = NULL;
-        return -1;
-    }
-    fprintf(stderr, "[debug] init_persistent_shell: started cmd.exe pid=%lu\n", (unsigned long)shell_pi.dwProcessId);
-    fflush(stderr);
-
-    return 0;
-}
-
-void close_persistent_shell(void) {
-    if (shell_pi.hProcess) {
-        TerminateProcess(shell_pi.hProcess, 1);
-        WaitForSingleObject(shell_pi.hProcess, 1000);
-        CloseHandle(shell_pi.hProcess);
-        CloseHandle(shell_pi.hThread);
-        shell_pi.hProcess = NULL;
-        shell_pi.hThread = NULL;
-    }
-    if (shell_stdin_w) { CloseHandle(shell_stdin_w); shell_stdin_w = NULL; }
-    if (shell_stdout_r) { CloseHandle(shell_stdout_r); shell_stdout_r = NULL; }
-    if (shell_stderr_r) { CloseHandle(shell_stderr_r); shell_stderr_r = NULL; }
-    fprintf(stderr, "[debug] close_persistent_shell: closed\n");
-    fflush(stderr);
-}
-
-#else
-
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <sys/ioctl.h>
-#include <signal.h>
-
-static FILE *shell_stdin_fp = NULL;
-static FILE *shell_stdout_fp = NULL;
-static FILE *shell_stderr_fp = NULL;
-static pid_t shell_pid = 0;
-
-int init_persistent_shell(void) {
-    int inpipe[2];
-    int outpipe[2];
-    int errpipe[2];
-    if (pipe(inpipe) != 0) return -1;
-    if (pipe(outpipe) != 0) { close(inpipe[0]); close(inpipe[1]); return -1; }
-    if (pipe(errpipe) != 0) { close(inpipe[0]); close(inpipe[1]); close(outpipe[0]); close(outpipe[1]); return -1; }
-
-    pid_t pid = fork();
-    if (pid < 0) {
-        close(inpipe[0]); close(inpipe[1]); close(outpipe[0]); close(outpipe[1]); close(errpipe[0]); close(errpipe[1]);
-        return -1;
-    }
-    if (pid == 0) {
-        dup2(inpipe[0], STDIN_FILENO);
-        dup2(outpipe[1], STDOUT_FILENO);
-        dup2(errpipe[1], STDERR_FILENO);
-        close(inpipe[0]); close(inpipe[1]); close(outpipe[0]); close(outpipe[1]); close(errpipe[0]); close(errpipe[1]);
-        execlp("sh", "sh", "-s", (char *)NULL);
-        _exit(127);
-    } else {
-        close(inpipe[0]);
-        close(outpipe[1]);
-        close(errpipe[1]);
-        shell_pid = pid;
-        shell_stdin_fp = fdopen(inpipe[1], "w");
-        shell_stdout_fp = fdopen(outpipe[0], "r");
-        shell_stderr_fp = fdopen(errpipe[0], "r");
-        if (!shell_stdin_fp || !shell_stdout_fp || !shell_stderr_fp) {
-            if (shell_stdin_fp) fclose(shell_stdin_fp);
-            if (shell_stdout_fp) fclose(shell_stdout_fp);
-            if (shell_stderr_fp) fclose(shell_stderr_fp);
-            shell_stdin_fp = NULL;
-            shell_stdout_fp = NULL;
-            shell_stderr_fp = NULL;
-            return -1;
-        }
-        setvbuf(shell_stdin_fp, NULL, _IONBF, 0);
-        setvbuf(shell_stdout_fp, NULL, _IONBF, 0);
-        setvbuf(shell_stderr_fp, NULL, _IONBF, 0);
-        fprintf(stderr, "[debug] init_persistent_shell: started sh pid=%d\n", (int)shell_pid);
-        fflush(stderr);
+    start = strstr(text, marker);
+    if (!start) {
         return 0;
     }
+
+    colon = start + strlen(marker);
+    if (*colon != ':') {
+        return -1;
+    }
+    colon += 1;
+
+    code = strtol(colon, &endptr, 10);
+    if (endptr == colon) {
+        return -1;
+    }
+
+    *exit_code = (int)code;
+    return 1;
 }
 
-int send_command_to_shell(const char *cmd) {
-    if (!shell_stdin_fp) return -1;
-    fprintf(stderr, "[debug] send_command_to_shell: cmd=\"%s\"\n", cmd);
-    fflush(stderr);
-    if (fputs(cmd, shell_stdin_fp) == EOF) {
-        fprintf(stderr, "[debug] send_command_to_shell: fputs failed\n"); fflush(stderr);
+static int read_pipe_available(HANDLE pipe, char *buffer, DWORD buffer_size, DWORD *bytes_read) {
+    DWORD available = 0;
+    DWORD to_read;
+
+    *bytes_read = 0;
+
+    if (!PeekNamedPipe(pipe, NULL, 0, NULL, &available, NULL)) {
         return -1;
     }
-    if (fputc('\n', shell_stdin_fp) == EOF) {
-        fprintf(stderr, "[debug] send_command_to_shell: fputc NL failed\n"); fflush(stderr);
+
+    if (available == 0) {
+        return 0;
+    }
+
+    to_read = available;
+    if (to_read > buffer_size) {
+        to_read = buffer_size;
+    }
+
+    if (!ReadFile(pipe, buffer, to_read, bytes_read, NULL)) {
         return -1;
     }
-    fflush(shell_stdin_fp);
-    fprintf(stderr, "[debug] send_command_to_shell: flushed\n"); fflush(stderr);
+
+    return 1;
+}
+
+static int write_shell_line(HANDLE stdin_write, const char *line) {
+    DWORD written = 0;
+    size_t len = strlen(line);
+
+    if (!WriteFile(stdin_write, line, (DWORD)len, &written, NULL) || written != (DWORD)len) {
+        return -1;
+    }
+
+    if (!WriteFile(stdin_write, "\r\n", 2, &written, NULL) || written != 2) {
+        return -1;
+    }
+
     return 0;
 }
 
-int read_shell_output_line(char *buf, size_t buflen) {
-    if (!shell_stdout_fp) return -1;
-    if (!fgets(buf, (int)buflen, shell_stdout_fp)) return -1;
-    return (int)strlen(buf);
-}
+static int start_persistent_shell(PersistentShell *shell) {
+    SECURITY_ATTRIBUTES sa;
+    STARTUPINFOA si;
+    HANDLE stdin_read = NULL;
+    HANDLE stdout_write = NULL;
+    HANDLE stderr_write = NULL;
+    char cmdline[] = "cmd.exe /Q /D";
 
-int drain_one_pipe_fd(FILE *f) {
-    if (!f) return 0;
-    int fd = fileno(f);
-    if (fd < 0) return -1;
-    int total = 0;
-    char tmp[8192];
-    for (;;) {
-        int avail = 0;
-        if (ioctl(fd, FIONREAD, &avail) < 0) return -1;
-        if (avail <= 0) break;
-        ssize_t r = read(fd, tmp, (avail > (int)sizeof(tmp)) ? sizeof(tmp) : avail);
-        if (r < 0) {
-            if (errno == EINTR) continue;
-            return -1;
-        }
-        if (r == 0) break;
-        total += (int)r;
+    ZeroMemory(shell, sizeof(PersistentShell));
+    ZeroMemory(&sa, sizeof(sa));
+    sa.nLength = sizeof(sa);
+    sa.bInheritHandle = TRUE;
+
+    if (!CreatePipe(&stdin_read, &shell->stdin_write, &sa, 0)) {
+        return -1;
     }
-    return total;
-}
-
-int drain_shell_output(void) {
-    int a = drain_one_pipe_fd(shell_stdout_fp);
-    int b = drain_one_pipe_fd(shell_stderr_fp);
-    if (a < 0 || b < 0) return -1;
-    fprintf(stderr, "[debug] drain_shell_output: drained stdout=%d stderr=%d bytes\n", a, b);
-    fflush(stderr);
-    return a + b;
-}
-
-void close_persistent_shell(void) {
-    if (shell_stdin_fp) { fclose(shell_stdin_fp); shell_stdin_fp = NULL; }
-    if (shell_stdout_fp) { fclose(shell_stdout_fp); shell_stdout_fp = NULL; }
-    if (shell_stderr_fp) { fclose(shell_stderr_fp); shell_stderr_fp = NULL; }
-    if (shell_pid > 0) {
-        kill(shell_pid, SIGTERM);
-        waitpid(shell_pid, NULL, 0);
-        shell_pid = 0;
+    if (!CreatePipe(&shell->stdout_read, &stdout_write, &sa, 0)) {
+        CloseHandle(stdin_read);
+        CloseHandle(shell->stdin_write);
+        return -1;
     }
-    fprintf(stderr, "[debug] close_persistent_shell: closed\n");
-    fflush(stderr);
-}
-
-#endif
-
-#ifdef _WIN32
-double get_current_time(void) {
-    static LARGE_INTEGER freq;
-    static int init = 0;
-    LARGE_INTEGER now;
-    if (!init) { QueryPerformanceFrequency(&freq); init = 1; }
-    QueryPerformanceCounter(&now);
-    return (double)now.QuadPart / (double)freq.QuadPart;
-}
-#else
-#include <time.h>
-double get_current_time(void) {
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return (double)ts.tv_sec + (double)ts.tv_nsec / 1e9;
-}
-#endif
-
-#define MAX_CMD_LEN 4096
-
-static int parse_end_marker(const char *line) {
-    const char *p = strstr(line, "__MEASURE_END__:");
-    if (!p) return -1;
-    p += strlen("__MEASURE_END__:");
-    while (*p == ' ' || *p == '\t') p++;
-    int code = atoi(p);
-    return code;
-}
-
-float measure_cmd_time(const char *cmd) {
-    char wrapped[MAX_CMD_LEN * 2];
-#ifdef _WIN32
-    snprintf(wrapped, sizeof(wrapped),
-    "%s > NUL 2>&1 & (if errorlevel 1 (echo __MEASURE_END__:1) else (echo __MEASURE_END__:0))",
-    cmd);
-#else
-    snprintf(wrapped, sizeof(wrapped), "%s > /dev/null 2>&1; printf \"__MEASURE_END__:%d\\n\" $?", cmd);
-#endif
-
-    fprintf(stderr, "[debug] measure_cmd_time: wrapped=\"%s\"\n", wrapped);
-    fflush(stderr);
-
-    char buf[8192];
-
-    double start = get_current_time();
-    if (send_command_to_shell(wrapped) != 0) {
-        fprintf(stderr, "[debug] measure_cmd_time: send_command_to_shell failed\n"); fflush(stderr);
-        return -1.0f;
+    if (!CreatePipe(&shell->stderr_read, &stderr_write, &sa, 0)) {
+        CloseHandle(stdin_read);
+        CloseHandle(shell->stdin_write);
+        CloseHandle(shell->stdout_read);
+        CloseHandle(stdout_write);
+        return -1;
     }
 
-    int exit_code = -1;
-    
+    SetHandleInformation(shell->stdin_write, HANDLE_FLAG_INHERIT, 0);
+    SetHandleInformation(shell->stdout_read, HANDLE_FLAG_INHERIT, 0);
+    SetHandleInformation(shell->stderr_read, HANDLE_FLAG_INHERIT, 0);
+
+    ZeroMemory(&si, sizeof(si));
+    si.cb = sizeof(si);
+    si.dwFlags = STARTF_USESTDHANDLES;
+    si.hStdInput = stdin_read;
+    si.hStdOutput = stdout_write;
+    si.hStdError = stderr_write;
+
+    if (!CreateProcessA(
+            NULL,
+            cmdline,
+            NULL,
+            NULL,
+            TRUE,
+            CREATE_NO_WINDOW,
+            NULL,
+            NULL,
+            &si,
+            &shell->pi)) {
+        CloseHandle(stdin_read);
+        CloseHandle(stdout_write);
+        CloseHandle(stderr_write);
+        CloseHandle(shell->stdin_write);
+        CloseHandle(shell->stdout_read);
+        CloseHandle(shell->stderr_read);
+        ZeroMemory(shell, sizeof(PersistentShell));
+        return -1;
+    }
+
+    CloseHandle(stdin_read);
+    CloseHandle(stdout_write);
+    CloseHandle(stderr_write);
+    return 0;
+}
+
+static void stop_persistent_shell(PersistentShell *shell) {
+    if (shell->pi.hProcess) {
+        TerminateProcess(shell->pi.hProcess, 1);
+        WaitForSingleObject(shell->pi.hProcess, 1000);
+        CloseHandle(shell->pi.hProcess);
+        shell->pi.hProcess = NULL;
+    }
+
+    if (shell->pi.hThread) {
+        CloseHandle(shell->pi.hThread);
+        shell->pi.hThread = NULL;
+    }
+
+    if (shell->stdin_write) {
+        CloseHandle(shell->stdin_write);
+        shell->stdin_write = NULL;
+    }
+
+    if (shell->stdout_read) {
+        CloseHandle(shell->stdout_read);
+        shell->stdout_read = NULL;
+    }
+
+    if (shell->stderr_read) {
+        CloseHandle(shell->stderr_read);
+        shell->stderr_read = NULL;
+    }
+}
+
+static void log_diagnostics(const char *command, const CommandResult *result) {
+    if (result->status == CMD_STATUS_TIMEOUT) {
+        fprintf(stderr, "[cmd_runner] TIMEOUT command=\"%s\" elapsed=%.6f stderr=\"%s\"\n",
+                command,
+                result->elapsed_seconds,
+                result->stderr_text);
+    } else if (result->status == CMD_STATUS_ERROR) {
+        fprintf(stderr,
+                "[cmd_runner] ERROR reason=%s command=\"%s\" exit_code=%d stderr=\"%s\" stdout_tail=\"%s\"\n",
+                result->reason,
+                command,
+                result->exit_code,
+                result->stderr_text,
+                result->stdout_tail);
+    }
+    fflush(stderr);
+}
+
+static CommandResult execute_command(
+    PersistentShell *shell,
+    const char *command,
+    double timeout_seconds,
+    unsigned long long command_id
+) {
+    CommandResult result;
+    char wrapped[(MAX_CMD_LEN * 2) + 128];
+    char marker[64];
+    char chunk[CHUNK_SIZE];
+    double start;
+    DWORD bytes_read;
+
+    init_result(&result);
+
+    if (command[0] == '\0') {
+        snprintf(result.reason, sizeof(result.reason), "empty_command");
+        return result;
+    }
+
+    snprintf(marker, sizeof(marker), "__CLIPBENCH_DONE_%llu__", command_id);
+    snprintf(
+        wrapped,
+        sizeof(wrapped),
+        "%s & echo %s:%%ERRORLEVEL%%",
+        command,
+        marker
+    );
+
+    start = now_seconds();
+
+    if (write_shell_line(shell->stdin_write, wrapped) != 0) {
+        snprintf(result.reason, sizeof(result.reason), "shell_write_failed");
+        return result;
+    }
+
     while (1) {
-        int r = read_shell_output_line(buf, sizeof(buf));
-        if (r <= 0) {
-            fprintf(stderr, "[debug] measure_cmd_time: read_shell_output_line returned %d\n", r);
-            fflush(stderr);
-            break;
+        int marker_state;
+
+        if (read_pipe_available(shell->stderr_read, chunk, CHUNK_SIZE, &bytes_read) < 0) {
+            snprintf(result.reason, sizeof(result.reason), "stderr_read_failed");
+            return result;
         }
-        fprintf(stderr, "[debug] measure_cmd_time: read line: %s", buf);
-        fflush(stderr);
-        int code = parse_end_marker(buf);
-        if (code != -1) {
-            exit_code = code;
-            fprintf(stderr, "[debug] measure_cmd_time: parsed end marker code=%d\n", code);
-            fflush(stderr);
-            break;
+        if (bytes_read > 0) {
+            append_capped(result.stderr_text, sizeof(result.stderr_text), chunk, bytes_read);
         }
+
+        if (read_pipe_available(shell->stdout_read, chunk, CHUNK_SIZE, &bytes_read) < 0) {
+            snprintf(result.reason, sizeof(result.reason), "stdout_read_failed");
+            return result;
+        }
+        if (bytes_read > 0) {
+            append_capped(result.stdout_tail, sizeof(result.stdout_tail), chunk, bytes_read);
+            marker_state = find_marker_exit_code(result.stdout_tail, marker, &result.exit_code);
+            if (marker_state < 0) {
+                snprintf(result.reason, sizeof(result.reason), "marker_parse_failed");
+                return result;
+            }
+            if (marker_state > 0) {
+                break;
+            }
+        }
+
+        result.elapsed_seconds = now_seconds() - start;
+        if (timeout_seconds > 0.0 && result.elapsed_seconds >= timeout_seconds) {
+            result.status = CMD_STATUS_TIMEOUT;
+            return result;
+        }
+
+        Sleep(2);
     }
 
-    double end = get_current_time();
+    result.elapsed_seconds = now_seconds() - start;
 
-    if (drain_shell_output() < 0) {
-        fprintf(stderr, "[debug] measure_cmd_time: drain_shell_output failed\n"); fflush(stderr);
-        return -1.0f;
+    if (result.exit_code == 0) {
+        result.status = CMD_STATUS_OK;
+        return result;
     }
-    
-    fprintf(stderr, "[debug] measure_cmd_time: start=%.6f end=%.6f elapsed=%.6f exit_code=%d\n",
-            start, end, end - start, exit_code);
-    fflush(stderr);
 
-    if (exit_code != 0) return -1.0f;
-    return (float)(end - start);
+    result.status = CMD_STATUS_ERROR;
+    snprintf(result.reason, sizeof(result.reason), "exit_code=%d", result.exit_code);
+    return result;
 }
 
-int main(void) {
-    if (init_persistent_shell() != 0) {
-        fprintf(stderr, "[debug] main: init_persistent_shell failed\n"); fflush(stderr);
+int main(int argc, char **argv) {
+    PersistentShell shell;
+    double timeout_seconds = 0.0;
+    char line[MAX_CMD_LEN];
+    unsigned long long command_id = 1;
+    int did_warmup = 0;
+
+    if (argc > 1) {
+        timeout_seconds = atof(argv[1]);
+        if (timeout_seconds < 0.0) {
+            fprintf(stderr, "[cmd_runner] invalid timeout: %s\n", argv[1]);
+            return 2;
+        }
+    }
+
+    if (start_persistent_shell(&shell) != 0) {
+        fprintf(stderr, "[cmd_runner] failed to start persistent cmd.exe shell\n");
         return 1;
     }
 
-    boolean is_first = TRUE;
-
-    char line[MAX_CMD_LEN];
     while (fgets(line, sizeof(line), stdin)) {
-        fprintf(stderr, "----------------------------------------------------------------------\n"); fflush(stderr);
-        size_t len = strlen(line);
-        if (len > 0 && line[len - 1] == '\n') line[len - 1] = '\0';
-        if (strlen(line) == 0) continue;
-        fprintf(stderr, "[debug] main: got command: \"%s\"\n", line); fflush(stderr);
-        float result = measure_cmd_time(line);
-        if (is_first) {
-            float result = measure_cmd_time(line);
-            is_first = FALSE;
+        size_t len;
+        CommandResult result;
+
+        len = strlen(line);
+        while (len > 0 && (line[len - 1] == '\n' || line[len - 1] == '\r')) {
+            line[len - 1] = '\0';
+            len -= 1;
         }
-        printf("%f\n", result);
+
+        if (!did_warmup) {
+            CommandResult warmup_result = execute_command(&shell, line, timeout_seconds, command_id++);
+            did_warmup = 1;
+
+            if (warmup_result.status == CMD_STATUS_TIMEOUT) {
+                log_diagnostics(line, &warmup_result);
+
+                stop_persistent_shell(&shell);
+                if (start_persistent_shell(&shell) != 0) {
+                    fprintf(stderr, "[cmd_runner] failed to recover shell after warm-up timeout\n");
+                    return 1;
+                }
+            } else if (warmup_result.status == CMD_STATUS_ERROR) {
+                log_diagnostics(line, &warmup_result);
+
+                if (strcmp(warmup_result.reason, "shell_write_failed") == 0 ||
+                    strcmp(warmup_result.reason, "stdout_read_failed") == 0 ||
+                    strcmp(warmup_result.reason, "stderr_read_failed") == 0) {
+                    stop_persistent_shell(&shell);
+                    if (start_persistent_shell(&shell) != 0) {
+                        fprintf(stderr, "[cmd_runner] failed to recover shell after warm-up runner I/O error\n");
+                        return 1;
+                    }
+                }
+            }
+        }
+
+        result = execute_command(&shell, line, timeout_seconds, command_id++);
+
+        if (result.status == CMD_STATUS_OK) {
+            printf("OK %.6f\n", result.elapsed_seconds);
+            fflush(stdout);
+            continue;
+        }
+
+        if (result.status == CMD_STATUS_TIMEOUT) {
+            printf("TIMEOUT\n");
+            fflush(stdout);
+            log_diagnostics(line, &result);
+
+            stop_persistent_shell(&shell);
+            if (start_persistent_shell(&shell) != 0) {
+                fprintf(stderr, "[cmd_runner] failed to recover shell after timeout\n");
+                return 1;
+            }
+            continue;
+        }
+
+        printf("ERROR %s\n", result.reason[0] ? result.reason : "command_failed");
         fflush(stdout);
+        log_diagnostics(line, &result);
+
+        if (strcmp(result.reason, "shell_write_failed") == 0 ||
+            strcmp(result.reason, "stdout_read_failed") == 0 ||
+            strcmp(result.reason, "stderr_read_failed") == 0) {
+            stop_persistent_shell(&shell);
+            if (start_persistent_shell(&shell) != 0) {
+                fprintf(stderr, "[cmd_runner] failed to recover shell after runner I/O error\n");
+                return 1;
+            }
+        }
     }
 
-    close_persistent_shell();
+    stop_persistent_shell(&shell);
     return 0;
 }
+
+#else
+
+int main(void) {
+    fprintf(stderr, "cmd_runner is currently implemented for Windows only.\n");
+    return 1;
+}
+
+#endif
