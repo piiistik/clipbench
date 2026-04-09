@@ -24,7 +24,7 @@ def test_random_sample():
     experiment = Experiment(command_builder, variable_handler)
     evaluator = Evaluator(experiment, SimpleRunner(), search_space)
 
-    random_method = RandomSample()
+    random_method = RandomSample(None)
 
     random_method.run(
         experiment.get_search_space_definition(), search_space, evaluator, budget=budget
