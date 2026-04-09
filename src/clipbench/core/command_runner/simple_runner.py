@@ -58,7 +58,10 @@ def configuration_simple_runner() -> dict:
 @register_instance("simple_runner")
 def factory_simple_runner(configuration: dict) -> SimpleRunner:
     default_iterations = configuration_simple_runner()["iterations"]["default"]
-    default_iteration_timeout = configuration_simple_runner()["iteration_timeout"]["default"]
+    default_iteration_timeout = configuration_simple_runner()["iteration_timeout"][
+        "default"
+    ]
     return SimpleRunner(
-        configuration.get("iterations", default_iterations), configuration.get("iteration_timeout", default_iteration_timeout)
+        configuration.get("iterations", default_iterations),
+        configuration.get("iteration_timeout", default_iteration_timeout),
     )

@@ -59,8 +59,14 @@ def get_registered_instance_of_command_runner(configuration: dict):
 
 
 def get_search_method_configurations():
-    return {name: producer() for name, producer in _REGISTERED_SEARCH_METHOD_CONFIGURATIONS.items()}
+    return {
+        name: producer()
+        for name, producer in _REGISTERED_SEARCH_METHOD_CONFIGURATIONS.items()
+    }
 
 
 def get_command_runner_configurations():
-    return {name: producer() for name, producer in _REGISTERED_COMMAND_RUNNER_CONFIGURATIONS.items()}
+    return {
+        name: producer()
+        for name, producer in _REGISTERED_COMMAND_RUNNER_CONFIGURATIONS.items()
+    }

@@ -15,9 +15,9 @@ def test_parse_xml():
 
 
 def test_parse_xml_dynamic_prefix_suffix_no_extra_spaces(tmp_path):
-        xml_path = tmp_path / "input.xml"
-        xml_path.write_text(
-                """<?xml version="1.0" encoding="UTF-8"?>
+    xml_path = tmp_path / "input.xml"
+    xml_path.write_text(
+        """<?xml version="1.0" encoding="UTF-8"?>
 <Parts>
     <Static>cmd --requirements z0:0.1 position:0.0,0.0</Static>
     <Dynamic prefix="direction:" suffix=",0.0">
@@ -28,11 +28,11 @@ def test_parse_xml_dynamic_prefix_suffix_no_extra_spaces(tmp_path):
     </Dynamic>
 </Parts>
 """,
-                encoding="utf-8",
-        )
+        encoding="utf-8",
+    )
 
-        experiment = provide_experiment(str(xml_path))
-        assert (
-                experiment.build_command([0, 0])
-                == "cmd --requirements z0:0.1 position:0.0,0.0 direction:0.00,0.0 energy:0.00"
-        )
+    experiment = provide_experiment(str(xml_path))
+    assert (
+        experiment.build_command([0, 0])
+        == "cmd --requirements z0:0.1 position:0.0,0.0 direction:0.00,0.0 energy:0.00"
+    )

@@ -1,10 +1,12 @@
-from clipbench.core.registry import get_command_runner_configurations, get_search_method_configurations
+from clipbench.core.registry import (
+    get_command_runner_configurations,
+    get_search_method_configurations,
+)
 from clipbench.core import search_method
 from clipbench.core import command_runner
 import json
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
-
 
 # Get configurations from registry (no transformation needed)
 runner_configs = get_command_runner_configurations()
@@ -37,7 +39,7 @@ html_output = template.render(
 
 # Write output
 output_path = template_dir / ".." / ".." / "bin" / "input_file_editor.html"
-output_path.write_text(html_output, encoding='utf-8')
+output_path.write_text(html_output, encoding="utf-8")
 
 print(f"Generated {output_path}")
 print(f"Runner schemas: {list(runner_configs.keys())}")

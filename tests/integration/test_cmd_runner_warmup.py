@@ -34,5 +34,7 @@ def test_cmd_runner_executes_first_command_twice_but_reports_once(tmp_path: Path
     assert out_lines[0].startswith("OK ")
     assert out_lines[1].startswith("OK ")
 
-    written_lines = [line.strip() for line in marker_file.read_text(encoding="utf-8").splitlines()]
+    written_lines = [
+        line.strip() for line in marker_file.read_text(encoding="utf-8").splitlines()
+    ]
     assert written_lines == ["first", "first", "second"]

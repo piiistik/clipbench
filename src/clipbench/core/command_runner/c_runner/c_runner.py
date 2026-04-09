@@ -7,9 +7,9 @@ from clipbench.core.command_runner.command_runner import CommandRunner
 
 import subprocess
 import sys
-from importlib import resources
+import sysconfig
+from pathlib import Path
 from typing import List, Optional
-
 
 NON_SUCCESS_SENTINEL = 1e9
 OVERHEAD_CALIBRATION_COMMAND = "echo"
@@ -17,16 +17,27 @@ OVERHEAD_CALIBRATION_COMMAND = "echo"
 
 def _get_cmd_runner_path():
     """
-    Return the absolute path to the packaged cmd_runner executable.
+    Return the absolute path to cmd_runner executable installed in the bin folder.
     """
-    pkg = "clipbench.core.command_runner.c_runner"
     name = "cmd_runner.exe" if sys.platform == "win32" else "cmd_runner"
 
-    path = resources.files(pkg) / name
-    if not path.exists():
-        raise FileNotFoundError(f"cmd_runner binary not found at {path}")
+    candidates = [
+        # Source checkout layout.
+        Path(__file__).resolve().parents[5] / "bin" / name,
+        # User-site install layout on Windows (e.g. AppData/Roaming/Python/bin).
+        Path(__file__).resolve().parents[6] / "bin" / name,
+        # Virtualenv/global install fallback.
+        Path(sys.prefix) / "bin" / name,
+        # Scripts path fallback (primarily for Windows venv installs).
+        Path(sysconfig.get_path("scripts")) / name,
+    ]
 
-    return str(path)
+    for path in candidates:
+        if path.exists():
+            return str(path)
+
+    locations = ", ".join(str(path) for path in candidates)
+    raise FileNotFoundError(f"cmd_runner binary not found. Checked: {locations}")
 
 
 def write_commands_to_file(commands: List[str], filepath: str):
@@ -155,9 +166,13 @@ class CRunner(CommandRunner):
             self._command_overhead = 0.0
             return
 
-        calibration_commands = [OVERHEAD_CALIBRATION_COMMAND] * self._overhead_measurement_runs
+        calibration_commands = [
+            OVERHEAD_CALIBRATION_COMMAND
+        ] * self._overhead_measurement_runs
         calibration_results = self._execute_batch(calibration_commands)
-        valid_results = [value for value in calibration_results if value != NON_SUCCESS_SENTINEL]
+        valid_results = [
+            value for value in calibration_results if value != NON_SUCCESS_SENTINEL
+        ]
 
         if not valid_results:
             raise RuntimeError(
@@ -175,7 +190,9 @@ class CRunner(CommandRunner):
 
         self._ensure_command_overhead()
         command_results = self._execute_batch(commands)
-        command_overhead = self._command_overhead if self._command_overhead is not None else 0.0
+        command_overhead = (
+            self._command_overhead if self._command_overhead is not None else 0.0
+        )
 
         adjusted_results: List[float] = []
         for value in command_results:

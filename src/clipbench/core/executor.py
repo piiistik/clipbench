@@ -3,7 +3,10 @@ from clipbench.configuration.configuration import Configuration
 from clipbench.core.evaluator import Evaluator
 
 from clipbench.core.search_space import SearchSpace
-from clipbench.core.registry import get_registered_instance_of_command_runner, get_registered_instance_of_search_method
+from clipbench.core.registry import (
+    get_registered_instance_of_command_runner,
+    get_registered_instance_of_search_method,
+)
 from clipbench.core.command_runner.command_runner import CommandRunner
 from clipbench.core.search_method.search_method import SearchMethod
 

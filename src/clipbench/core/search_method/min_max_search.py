@@ -57,6 +57,7 @@ class MinMaxSearch(SearchMethod):
         or we've done `self.restarts` restarts. Evaluations are written into `search_space`
         by calling `evaluator.evaluate([vector])`. We read results from `search_space`.
         """
+
         # Helper closures
         def random_vector() -> VariableVector:
             return tuple(self._rng.randint(lo, hi) for (lo, hi) in space_definition)
@@ -88,7 +89,9 @@ class MinMaxSearch(SearchMethod):
                 if budget <= 0:
                     # No budget left. Return VERY_BAD so it's unlikely to be selected.
                     return VERY_BAD
-                evaluator.evaluate([vec])  # evaluator is expected to write back to search_space
+                evaluator.evaluate(
+                    [vec]
+                )  # evaluator is expected to write back to search_space
                 budget -= 1
             val = search_space.get(vec)
             # Treat None as failure -> VERY_BAD
@@ -165,7 +168,15 @@ class MinMaxSearch(SearchMethod):
                 # If start already evaluated it's OK (we reuse value; no budget consumed)
                 final_vec, final_energy = sa_run(start, target_mode)
                 # Optional local greedy descent/climb to polish endpoint (consumes budget)
-                polished = self._local_polish(final_vec, target_mode, space_definition, search_space, evaluator, budget, get_energy)
+                polished = self._local_polish(
+                    final_vec,
+                    target_mode,
+                    space_definition,
+                    search_space,
+                    evaluator,
+                    budget,
+                    get_energy,
+                )
                 # _local_polish may have consumed budget; it returns (vec, updated_budget)
                 final_vec = polished[0]
                 budget = polished[1]
@@ -189,8 +200,16 @@ class MinMaxSearch(SearchMethod):
         # Nothing to return; search_space modified in-place by calls to evaluator.evaluate.
         return
 
-    def _local_polish(self, start_vec: VariableVector, target_mode: str, space_definition: SpaceDefinition,
-                      search_space: SearchSpace, evaluator: Evaluator, budget: int, energy_fn) -> Tuple[VariableVector, int]:
+    def _local_polish(
+        self,
+        start_vec: VariableVector,
+        target_mode: str,
+        space_definition: SpaceDefinition,
+        search_space: SearchSpace,
+        evaluator: Evaluator,
+        budget: int,
+        energy_fn,
+    ) -> Tuple[VariableVector, int]:
         """
         Greedy local polish: attempt to deterministically improve the solution by
         exploring all 1-step neighbors and moving to any strictly better neighbor,

@@ -54,9 +54,9 @@ def test_cli_runs_example_with_c_runner(tmp_path: Path):
         timeout=60,
     )
 
-    assert completed.returncode == 0, (
-        f"clipbench CLI failed.\nSTDOUT:\n{completed.stdout}\nSTDERR:\n{completed.stderr}"
-    )
+    assert (
+        completed.returncode == 0
+    ), f"clipbench CLI failed.\nSTDOUT:\n{completed.stdout}\nSTDERR:\n{completed.stderr}"
 
     result_csv = work_example / "result.csv"
     assert result_csv.exists(), "Expected result.csv to be created by CLI run"

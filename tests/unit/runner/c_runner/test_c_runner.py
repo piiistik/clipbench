@@ -21,7 +21,9 @@ class _FakeProc:
 
 
 def test_c_runner_parses_ok_lines(monkeypatch):
-    monkeypatch.setattr(c_runner, "_get_cmd_runner_path", lambda: "C:/fake/cmd_runner.exe")
+    monkeypatch.setattr(
+        c_runner, "_get_cmd_runner_path", lambda: "C:/fake/cmd_runner.exe"
+    )
     monkeypatch.setattr(
         subprocess,
         "Popen",
@@ -35,7 +37,9 @@ def test_c_runner_parses_ok_lines(monkeypatch):
 
 
 def test_c_runner_maps_timeout_and_error_to_sentinel(monkeypatch):
-    monkeypatch.setattr(c_runner, "_get_cmd_runner_path", lambda: "C:/fake/cmd_runner.exe")
+    monkeypatch.setattr(
+        c_runner, "_get_cmd_runner_path", lambda: "C:/fake/cmd_runner.exe"
+    )
     monkeypatch.setattr(
         subprocess,
         "Popen",
@@ -45,7 +49,11 @@ def test_c_runner_maps_timeout_and_error_to_sentinel(monkeypatch):
     runner = c_runner.CRunner()
     results = runner.run(["ok", "slow", "bad"])
 
-    assert results == [0.05, c_runner.NON_SUCCESS_SENTINEL, c_runner.NON_SUCCESS_SENTINEL]
+    assert results == [
+        0.05,
+        c_runner.NON_SUCCESS_SENTINEL,
+        c_runner.NON_SUCCESS_SENTINEL,
+    ]
 
 
 def test_c_runner_passes_per_command_timeout_argument(monkeypatch):
@@ -55,7 +63,9 @@ def test_c_runner_passes_per_command_timeout_argument(monkeypatch):
         popen_calls.append(args[0])
         return _FakeProc("OK 0.100000\n")
 
-    monkeypatch.setattr(c_runner, "_get_cmd_runner_path", lambda: "C:/fake/cmd_runner.exe")
+    monkeypatch.setattr(
+        c_runner, "_get_cmd_runner_path", lambda: "C:/fake/cmd_runner.exe"
+    )
     monkeypatch.setattr(subprocess, "Popen", _fake_popen)
 
     runner = c_runner.CRunner(timeout_seconds=1.25)
@@ -65,7 +75,9 @@ def test_c_runner_passes_per_command_timeout_argument(monkeypatch):
 
 
 def test_c_runner_raises_on_unknown_status_line(monkeypatch):
-    monkeypatch.setattr(c_runner, "_get_cmd_runner_path", lambda: "C:/fake/cmd_runner.exe")
+    monkeypatch.setattr(
+        c_runner, "_get_cmd_runner_path", lambda: "C:/fake/cmd_runner.exe"
+    )
     monkeypatch.setattr(
         subprocess,
         "Popen",
@@ -95,7 +107,9 @@ def test_c_runner_subtracts_measured_overhead(monkeypatch):
 
         return _Proc()
 
-    monkeypatch.setattr(c_runner, "_get_cmd_runner_path", lambda: "C:/fake/cmd_runner.exe")
+    monkeypatch.setattr(
+        c_runner, "_get_cmd_runner_path", lambda: "C:/fake/cmd_runner.exe"
+    )
     monkeypatch.setattr(subprocess, "Popen", _fake_popen)
 
     runner = c_runner.CRunner(overhead_measurement_runs=2)
@@ -124,7 +138,9 @@ def test_c_runner_calibrates_only_once(monkeypatch):
 
         return _Proc()
 
-    monkeypatch.setattr(c_runner, "_get_cmd_runner_path", lambda: "C:/fake/cmd_runner.exe")
+    monkeypatch.setattr(
+        c_runner, "_get_cmd_runner_path", lambda: "C:/fake/cmd_runner.exe"
+    )
     monkeypatch.setattr(subprocess, "Popen", _fake_popen)
 
     runner = c_runner.CRunner(overhead_measurement_runs=1)
@@ -151,7 +167,9 @@ def test_c_runner_clamps_adjusted_values_to_zero(monkeypatch):
 
         return _Proc()
 
-    monkeypatch.setattr(c_runner, "_get_cmd_runner_path", lambda: "C:/fake/cmd_runner.exe")
+    monkeypatch.setattr(
+        c_runner, "_get_cmd_runner_path", lambda: "C:/fake/cmd_runner.exe"
+    )
     monkeypatch.setattr(subprocess, "Popen", _fake_popen)
 
     runner = c_runner.CRunner(overhead_measurement_runs=1)

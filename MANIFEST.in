@@ -1,2 +1,6 @@
 include README.md LICENSE
-recursive-include src/clipbench/core/command_runner/c_runner *.c *.exe cmd_runner
+recursive-include src/clipbench/core/command_runner/c_runner *.c
+exclude src/clipbench/core/command_runner/c_runner/cmd_runner
+exclude src/clipbench/core/command_runner/c_runner/cmd_runner.exe
+recursive-include src/input_file_editor *.py *.j2
+recursive-include src/result_viewer *.html

@@ -9,6 +9,7 @@ from clipbench.core.registry import (
     register_search_method_configuration as register_configuration,
 )
 
+
 class RandomSample(SearchMethod):
     """
     Uniform random sampling across the integer search space.
