@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Result Viewer</title>
+  <style>
+    :root {
+      --bg-1: #f5f8f7;
+      --bg-2: #e9f2ef;
+      --panel: #ffffff;
+      --text: #13241f;
+      --muted: #4f6b62;
+      --border: #c8d8d2;
+      --accent: #0b8f73;
+      --accent-strong: #08745d;
+      --warn: #8a4b02;
+      --error: #a62a1b;
+      --radius: 14px;
+      --shadow: 0 14px 34px rgba(10, 55, 45, 0.14);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      font-family: "IBM Plex Sans", "Segoe UI", Tahoma, sans-serif;
+      background:
+        radial-gradient(1000px 520px at 85% -15%, #c7efe6 0%, transparent 62%),
+        radial-gradient(840px 420px at -10% 110%, #d9eee6 0%, transparent 64%),
+        linear-gradient(160deg, var(--bg-1), var(--bg-2));
+      min-height: 100vh;
+    }
+
+    header {
+      padding: 18px 24px;
+      background: linear-gradient(130deg, #13362d, #0d221c);
+      color: #f2faf7;
+      box-shadow: var(--shadow);
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 24px;
+      letter-spacing: 0.2px;
+    }
+
+    header p {
+      margin: 6px 0 0;
+      color: #cae5dc;
+      font-size: 14px;
+    }
+
+    .app {
+      max-width: 1280px;
+      margin: 20px auto;
+      padding: 0 16px 22px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+
+    .controls {
+      display: grid;
+      gap: 12px;
+    }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fbfefd;
+    }
+
+    label {
+      font-size: 13px;
+      font-weight: 650;
+      color: #214138;
+    }
+
+    select,
+    button,
+    .btn {
+      font: inherit;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      padding: 9px 12px;
+      line-height: 1;
+    }
+
+    select {
+      border-color: var(--border);
+      background: #fff;
+      color: var(--text);
+      min-width: 150px;
+    }
+
+    button,
+    .btn {
+      cursor: pointer;
+      font-weight: 650;
+      background: #e6f5f1;
+      color: #0e5f4d;
+    }
+
+    button.primary,
+    .btn.primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    button.primary:hover,
+    .btn.primary:hover {
+      background: var(--accent-strong);
+    }
+
+    button.ghost,
+    .btn.ghost {
+      background: #fff;
+      color: var(--text);
+      border-color: var(--border);
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .mode-toggle {
+      display: inline-flex;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .mode-btn {
+      border: none;
+      border-right: 1px solid var(--border);
+      border-radius: 0;
+      background: transparent;
+      color: var(--muted);
+      padding: 10px 14px;
+      font-weight: 650;
+    }
+
+    .mode-btn:last-child {
+      border-right: none;
+    }
+
+    .mode-btn.active {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .status {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #f6fcfa;
+      color: var(--muted);
+      font-size: 13px;
+      padding: 10px 12px;
+      white-space: pre-wrap;
+    }
+
+    .status.warning {
+      color: var(--warn);
+      border-color: #efd8b9;
+      background: #fff9f1;
+    }
+
+    .status.error {
+      color: var(--error);
+      border-color: #f5c8c2;
+      background: #fff4f2;
+    }
+
+    .chart-wrap {
+      min-height: 540px;
+    }
+
+    #plot {
+      width: 100%;
+      min-height: 520px;
+    }
+
+    .hint {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    @media (max-width: 860px) {
+      .chart-wrap,
+      #plot {
+        min-height: 430px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Result Viewer</h1>
+    <p>Load a result CSV and explore timings in 1D line mode or 2D heatmap mode.</p>
+  </header>
+
+  <main class="app">
+    <section class="panel controls">
+      <div class="row">
+        <label class="btn primary" for="csvInput">Load CSV</label>
+        <input id="csvInput" type="file" accept=".csv,text/csv" />
+        <button id="resetBtn" class="ghost">Reset</button>
+        <span class="hint" id="datasetSummary">No dataset loaded.</span>
+      </div>
+
+      <div class="row">
+        <div class="group">
+          <label>Mode</label>
+          <div class="mode-toggle">
+            <button id="mode1dBtn" class="mode-btn active" type="button">1D</button>
+            <button id="mode2dBtn" class="mode-btn" type="button">2D</button>
+          </div>
+        </div>
+
+        <div class="group">
+          <label for="xSelect">X axis</label>
+          <select id="xSelect" disabled></select>
+        </div>
+
+        <div class="group" id="yGroup" style="display:none;">
+          <label for="ySelect">Y axis</label>
+          <select id="ySelect" disabled></select>
+        </div>
+      </div>
+
+      <div id="status" class="status">Load a CSV file to begin.</div>
+    </section>
+
+    <section class="panel chart-wrap">
+      <div id="plot"></div>
+    </section>
+  </main>
+
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <script>
+    const csvInputEl = document.getElementById("csvInput");
+    const resetBtnEl = document.getElementById("resetBtn");
+    const mode1dBtnEl = document.getElementById("mode1dBtn");
+    const mode2dBtnEl = document.getElementById("mode2dBtn");
+    const xSelectEl = document.getElementById("xSelect");
+    const ySelectEl = document.getElementById("ySelect");
+    const yGroupEl = document.getElementById("yGroup");
+    const statusEl = document.getElementById("status");
+    const datasetSummaryEl = document.getElementById("datasetSummary");
+    const plotEl = document.getElementById("plot");
+
+    const MODE_1D = "1d";
+    const MODE_2D = "2d";
+
+    let currentMode = MODE_1D;
+    let dataset = null;
+
+    function setStatus(message, kind = "info") {
+      statusEl.className = "status";
+      if (kind === "warning") statusEl.classList.add("warning");
+      if (kind === "error") statusEl.classList.add("error");
+      statusEl.textContent = message;
+    }
+
+    function resetState() {
+      dataset = null;
+      xSelectEl.innerHTML = "";
+      ySelectEl.innerHTML = "";
+      xSelectEl.disabled = true;
+      ySelectEl.disabled = true;
+      datasetSummaryEl.textContent = "No dataset loaded.";
+      setStatus("Load a CSV file to begin.");
+      Plotly.purge(plotEl);
+      plotEl.innerHTML = "";
+    }
+
+    function parseCsvLine(line) {
+      const cells = [];
+      let cell = "";
+      let inQuotes = false;
+
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') {
+          const next = line[i + 1];
+          if (inQuotes && next === '"') {
+            cell += '"';
+            i += 1;
+          } else {
+            inQuotes = !inQuotes;
+          }
+          continue;
+        }
+
+        if (ch === "," && !inQuotes) {
+          cells.push(cell.trim());
+          cell = "";
+        } else {
+          cell += ch;
+        }
+      }
+
+      cells.push(cell.trim());
+      return cells;
+    }
+
+    function parseCsv(text) {
+      const rawLines = text
+        .split(/\r?\n/)
+        .map(line => line.trim())
+        .filter(line => line.length > 0);
+
+      if (!rawLines.length) {
+        throw new Error("CSV file is empty.");
+      }
+
+      const headers = parseCsvLine(rawLines[0]);
+      if (!headers.length) {
+        throw new Error("CSV header row is invalid.");
+      }
+
+      const lowerHeaders = headers.map(h => h.toLowerCase());
+      const timeIndex = lowerHeaders.indexOf("time");
+      if (timeIndex < 0) {
+        throw new Error("CSV must contain a 'time' column.");
+      }
+
+      const variableIndices = headers
+        .map((name, idx) => ({ name, idx }))
+        .filter(item => item.idx !== timeIndex);
+
+      if (!variableIndices.length) {
+        throw new Error("CSV must contain at least one variable column besides 'time'.");
+      }
+
+      const rows = [];
+      let skipped = 0;
+
+      for (let i = 1; i < rawLines.length; i++) {
+        const parsed = parseCsvLine(rawLines[i]);
+        if (parsed.length !== headers.length) {
+          skipped += 1;
+          continue;
+        }
+
+        const time = Number(parsed[timeIndex]);
+        if (!Number.isFinite(time)) {
+          skipped += 1;
+          continue;
+        }
+
+        const values = {};
+        let isValid = true;
+
+        for (const { name, idx } of variableIndices) {
+          const value = Number(parsed[idx]);
+          if (!Number.isFinite(value)) {
+            isValid = false;
+            break;
+          }
+          values[name] = value;
+        }
+
+        if (!isValid) {
+          skipped += 1;
+          continue;
+        }
+
+        rows.push({ time, values });
+      }
+
+      if (!rows.length) {
+        throw new Error("No valid numeric rows found. Ensure time and variable columns are numeric.");
+      }
+
+      return {
+        headers,
+        variableNames: variableIndices.map(v => v.name),
+        rows,
+        skippedRows: skipped,
+      };
+    }
+
+    function fillSelect(select, options, selectedValue) {
+      select.innerHTML = "";
+      options.forEach(opt => {
+        const node = document.createElement("option");
+        node.value = opt;
+        node.textContent = opt;
+        if (opt === selectedValue) node.selected = true;
+        select.appendChild(node);
+      });
+      select.disabled = options.length === 0;
+    }
+
+    function setupSelectors() {
+      const vars = dataset.variableNames;
+      const defaultX = vars[0];
+      const defaultY = vars.length > 1 ? vars[1] : vars[0];
+      fillSelect(xSelectEl, vars, defaultX);
+      fillSelect(ySelectEl, vars, defaultY);
+      xSelectEl.disabled = false;
+      ySelectEl.disabled = false;
+      syncAxisVisibility();
+    }
+
+    function syncAxisVisibility() {
+      yGroupEl.style.display = currentMode === MODE_2D ? "flex" : "none";
+      mode1dBtnEl.classList.toggle("active", currentMode === MODE_1D);
+      mode2dBtnEl.classList.toggle("active", currentMode === MODE_2D);
+    }
+
+    function mean(values) {
+      if (!values.length) return NaN;
+      return values.reduce((acc, value) => acc + value, 0) / values.length;
+    }
+
+    function render1D() {
+      const xName = xSelectEl.value;
+      if (!xName) {
+        setStatus("Select an X axis variable.", "warning");
+        return;
+      }
+
+      const grouped = new Map();
+      for (const row of dataset.rows) {
+        const x = row.values[xName];
+        if (!grouped.has(x)) grouped.set(x, []);
+        grouped.get(x).push(row.time);
+      }
+
+      const xValues = Array.from(grouped.keys()).sort((a, b) => a - b);
+      const yValues = xValues.map(x => mean(grouped.get(x)));
+
+      const trace = {
+        type: "scatter",
+        mode: "lines+markers",
+        x: xValues,
+        y: yValues,
+        marker: { size: 6, color: "#0b8f73" },
+        line: { width: 2, color: "#08745d" },
+        hovertemplate: `${xName}: %{x}<br>avg time: %{y:.6f}<extra></extra>`,
+      };
+
+      const layout = {
+        title: `1D View: ${xName} vs time`,
+        margin: { l: 58, r: 24, t: 50, b: 52 },
+        paper_bgcolor: "#ffffff",
+        plot_bgcolor: "#ffffff",
+        xaxis: { title: xName, zeroline: false, gridcolor: "#e8efec" },
+        yaxis: { title: "time", zeroline: false, gridcolor: "#e8efec" },
+      };
+
+      Plotly.react(plotEl, [trace], layout, { responsive: true, displaylogo: false });
+
+      const skippedMsg = dataset.skippedRows ? `\nSkipped rows: ${dataset.skippedRows}.` : "";
+      setStatus(`1D rendered using mean time per ${xName}.${skippedMsg}`.trim());
+    }
+
+    function render2D() {
+      const xName = xSelectEl.value;
+      const yName = ySelectEl.value;
+
+      if (!xName || !yName) {
+        setStatus("Select both X and Y axis variables.", "warning");
+        return;
+      }
+
+      if (xName === yName) {
+        setStatus("Choose two different variables for 2D mode.", "warning");
+        return;
+      }
+
+      const gridMap = new Map();
+      for (const row of dataset.rows) {
+        const x = row.values[xName];
+        const y = row.values[yName];
+        const key = `${x}|${y}`;
+        if (!gridMap.has(key)) {
+          gridMap.set(key, { x, y, times: [] });
+        }
+        gridMap.get(key).times.push(row.time);
+      }
+
+      const xValues = Array.from(new Set(Array.from(gridMap.values()).map(v => v.x))).sort((a, b) => a - b);
+      const yValues = Array.from(new Set(Array.from(gridMap.values()).map(v => v.y))).sort((a, b) => a - b);
+
+      const xIndex = new Map(xValues.map((v, i) => [v, i]));
+      const yIndex = new Map(yValues.map((v, i) => [v, i]));
+
+      const z = yValues.map(() => xValues.map(() => null));
+
+      gridMap.forEach(cell => {
+        const xi = xIndex.get(cell.x);
+        const yi = yIndex.get(cell.y);
+        z[yi][xi] = mean(cell.times);
+      });
+
+      const trace = {
+        type: "heatmap",
+        x: xValues,
+        y: yValues,
+        z,
+        colorbar: { title: "avg time" },
+        colorscale: "Viridis",
+        hovertemplate: `${xName}: %{x}<br>${yName}: %{y}<br>avg time: %{z:.6f}<extra></extra>`,
+      };
+
+      const layout = {
+        title: `2D Heatmap: ${xName} vs ${yName}`,
+        margin: { l: 62, r: 24, t: 50, b: 55 },
+        paper_bgcolor: "#ffffff",
+        plot_bgcolor: "#ffffff",
+        xaxis: { title: xName, zeroline: false },
+        yaxis: { title: yName, zeroline: false },
+      };
+
+      Plotly.react(plotEl, [trace], layout, { responsive: true, displaylogo: false });
+
+      const skippedMsg = dataset.skippedRows ? `\nSkipped rows: ${dataset.skippedRows}.` : "";
+      setStatus(`2D rendered using mean time per (${xName}, ${yName}) cell.${skippedMsg}`.trim());
+    }
+
+    function renderCurrentMode() {
+      if (!dataset) {
+        setStatus("Load a CSV file to begin.");
+        return;
+      }
+
+      if (currentMode === MODE_1D) {
+        render1D();
+      } else {
+        render2D();
+      }
+    }
+
+    function onCsvLoaded(text, filename) {
+      dataset = parseCsv(text);
+      setupSelectors();
+
+      datasetSummaryEl.textContent =
+        `Loaded ${filename} | rows: ${dataset.rows.length} | variables: ${dataset.variableNames.join(", ")}`;
+
+      renderCurrentMode();
+    }
+
+    csvInputEl.addEventListener("change", async (event) => {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+
+      try {
+        const text = await file.text();
+        onCsvLoaded(text, file.name);
+      } catch (error) {
+        setStatus(`Could not load CSV: ${error.message}`, "error");
+      }
+
+      event.target.value = "";
+    });
+
+    resetBtnEl.addEventListener("click", () => {
+      resetState();
+    });
+
+    mode1dBtnEl.addEventListener("click", () => {
+      currentMode = MODE_1D;
+      syncAxisVisibility();
+      renderCurrentMode();
+    });
+
+    mode2dBtnEl.addEventListener("click", () => {
+      currentMode = MODE_2D;
+      syncAxisVisibility();
+      renderCurrentMode();
+    });
+
+    xSelectEl.addEventListener("change", renderCurrentMode);
+    ySelectEl.addEventListener("change", renderCurrentMode);
+
+    syncAxisVisibility();
+    resetState();
+  </script>
+</body>
+</html>

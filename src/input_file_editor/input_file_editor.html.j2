@@ -427,8 +427,8 @@
 
     const DEFAULT_COMMAND = [
       { kind: "Static", text: "powershell .\\your_powershell_script.ps1" },
-      { kind: "Dynamic", dynamicType: "Int", attrs: { min: 0, max: 1000, step: 1 } },
-      { kind: "Dynamic", dynamicType: "Float", attrs: { min: 0.0, max: 100.0, accuracy: 0.01 } }
+      { kind: "Dynamic", dynamicType: "Int", attrs: { min: 0, max: 1000, step: 1 }, prefix: "", suffix: "" },
+      { kind: "Dynamic", dynamicType: "Float", attrs: { min: 0.0, max: 100.0, accuracy: 0.01 }, prefix: "", suffix: "" }
     ];
 
     let configState = deepClone(DEFAULT_CONFIG);
@@ -720,7 +720,9 @@
             commandState[index] = {
               kind: "Dynamic",
               dynamicType: block.dynamicType || "Int",
-              attrs: deepClone(defaultAttrsForType(block.dynamicType || "Int"))
+              attrs: deepClone(defaultAttrsForType(block.dynamicType || "Int")),
+              prefix: "",
+              suffix: ""
             };
           }
           renderCommandEditor();
@@ -797,12 +799,30 @@
             field.appendChild(input);
             body.appendChild(field);
           });
+
+          ["prefix", "suffix"].forEach(propName => {
+            const field = document.createElement("div");
+            field.className = "field";
+            const label = document.createElement("label");
+            label.textContent = `${propName} (string)`;
+            field.appendChild(label);
+
+            const input = document.createElement("input");
+            input.type = "text";
+            input.value = block[propName] || "";
+            input.addEventListener("input", () => {
+              commandState[index][propName] = input.value;
+              updateXmlPreview();
+            });
+            field.appendChild(input);
+            body.appendChild(field);
+          });
         }
 
         const footer = document.createElement("div");
         footer.className = "block-footer";
         footer.appendChild(makeSmallButton("Insert Static after", () => insertBlock(index + 1, { kind: "Static", text: "" })));
-        footer.appendChild(makeSmallButton("Insert Dynamic after", () => insertBlock(index + 1, { kind: "Dynamic", dynamicType: "Int", attrs: deepClone(defaultAttrsForType("Int")) })));
+        footer.appendChild(makeSmallButton("Insert Dynamic after", () => insertBlock(index + 1, { kind: "Dynamic", dynamicType: "Int", attrs: deepClone(defaultAttrsForType("Int")), prefix: "", suffix: "" })));
 
         card.appendChild(header);
         card.appendChild(body);
@@ -867,8 +887,11 @@
           const attrString = Object.entries(attrs)
             .map(([k, v]) => `${k}="${escapeXml(v ?? "")}"`)
             .join(" ");
-          lines.push(`  <Dynamic>`);
-          lines.push(`    <${typeName}${attrString ? " " + attrString : ""}/>`);
+          const dynAttrs = [];
+          if (block.prefix) dynAttrs.push(`prefix="${escapeXml(block.prefix)}"`);
+          if (block.suffix) dynAttrs.push(`suffix="${escapeXml(block.suffix)}"`);
+          lines.push(`  <Dynamic${dynAttrs.length ? " " + dynAttrs.join(" ") : ""}>`);
+          lines.push(`    <${typeName}${attrString ? " " + attrString : ""}/>`);      
           lines.push(`  </Dynamic>`);
         }
       });
@@ -902,7 +925,9 @@
           Array.from(child.attributes).forEach(attr => {
             attrs[attr.name] = attr.value;
           });
-          blocks.push({ kind: "Dynamic", dynamicType, attrs });
+          const prefix = node.getAttribute("prefix") || "";
+          const suffix = node.getAttribute("suffix") || "";
+          blocks.push({ kind: "Dynamic", dynamicType, attrs, prefix, suffix });
         }
       });
       return blocks;
@@ -987,7 +1012,7 @@
       });
 
       document.getElementById("addDynamicBtn").addEventListener("click", () => {
-        commandState.push({ kind: "Dynamic", dynamicType: "Int", attrs: deepClone(defaultAttrsForType("Int")) });
+        commandState.push({ kind: "Dynamic", dynamicType: "Int", attrs: deepClone(defaultAttrsForType("Int")), prefix: "", suffix: "" });
         renderCommandEditor();
       });
     }
