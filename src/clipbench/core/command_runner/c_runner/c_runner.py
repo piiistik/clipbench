@@ -11,7 +11,8 @@ import sysconfig
 from pathlib import Path
 from typing import List, Optional
 
-NON_SUCCESS_SENTINEL = 1e9
+TIMEOUT_SENTINEL = -1e9
+ERROR_SENTINEL = -2e9
 OVERHEAD_CALIBRATION_COMMAND = "echo"
 
 
@@ -129,11 +130,11 @@ class CRunner(CommandRunner):
         results: List[float] = []
         for i, ln in enumerate(out_lines):
             if ln == "TIMEOUT":
-                results.append(NON_SUCCESS_SENTINEL)
+                results.append(TIMEOUT_SENTINEL)
                 continue
 
             if ln.startswith("ERROR"):
-                results.append(NON_SUCCESS_SENTINEL)
+                results.append(ERROR_SENTINEL)
                 continue
 
             if ln.startswith("OK "):
@@ -171,7 +172,8 @@ class CRunner(CommandRunner):
         ] * self._overhead_measurement_runs
         calibration_results = self._execute_batch(calibration_commands)
         valid_results = [
-            value for value in calibration_results if value != NON_SUCCESS_SENTINEL
+            value for value in calibration_results
+            if value != TIMEOUT_SENTINEL and value != ERROR_SENTINEL
         ]
 
         if not valid_results:
@@ -196,7 +198,7 @@ class CRunner(CommandRunner):
 
         adjusted_results: List[float] = []
         for value in command_results:
-            if value == NON_SUCCESS_SENTINEL:
+            if value == TIMEOUT_SENTINEL or value == ERROR_SENTINEL:
                 adjusted_results.append(value)
             else:
                 adjusted_results.append(max(0.0, value - command_overhead))

@@ -9,6 +9,9 @@ from bokeh.palettes import Viridis256
 
 import csv
 
+TIMEOUT_SENTINEL = -1e9
+ERROR_SENTINEL = -2e9
+
 
 def load_csv_to_dict(csv_path):
     """Load CSV file into a list of dictionaries."""
@@ -62,11 +65,21 @@ def create_scatter_and_heatmap_html(data, output_html):
         ]
 
     filtered = filter_data(x_var, fixed_vars)
-    x_vals = [float(row[x_var]) for row in filtered]
-    time_vals = [float(row["time"]) for row in filtered]
+    x_ok, time_ok, x_timeout, x_error = [], [], [], []
+    for _row in filtered:
+        _t = float(_row["time"])
+        if _t == TIMEOUT_SENTINEL:
+            x_timeout.append(float(_row[x_var]))
+        elif _t == ERROR_SENTINEL:
+            x_error.append(float(_row[x_var]))
+        else:
+            x_ok.append(float(_row[x_var]))
+            time_ok.append(_t)
 
     # Scatter plot
-    scatter_source = ColumnDataSource(data={"x": x_vals, "time": time_vals})
+    scatter_source = ColumnDataSource(data={"x": x_ok, "time": time_ok})
+    scatter_timeout_source = ColumnDataSource(data={"x": x_timeout, "time": [0.0] * len(x_timeout)})
+    scatter_error_source = ColumnDataSource(data={"x": x_error, "time": [0.0] * len(x_error)})
     scatter_p = figure(
         title=f"Scatter: {x_var} vs time",
         x_axis_label=x_var,
@@ -75,6 +88,14 @@ def create_scatter_and_heatmap_html(data, output_html):
     )
     scatter_p.scatter(
         "x", "time", source=scatter_source, size=8, color="navy", alpha=0.5
+    )
+    scatter_p.triangle(
+        "x", "time", source=scatter_timeout_source, size=10, color="orange",
+        alpha=0.9, legend_label="timeout",
+    )
+    scatter_p.x(
+        "x", "time", source=scatter_error_source, size=10, color="red",
+        line_width=2, alpha=0.9, legend_label="error",
     )
 
     # Scatter menu
@@ -102,17 +123,35 @@ def create_scatter_and_heatmap_html(data, output_html):
         ]
 
     heatmap_filtered = filter_heatmap_data(x_var, y_var, heatmap_fixed_vars)
-    x_vals_hm = [float(row[x_var]) for row in heatmap_filtered]
-    y_vals_hm = [float(row[y_var]) for row in heatmap_filtered]
-    time_vals_hm = [float(row["time"]) for row in heatmap_filtered]
+    x_hm_ok, y_hm_ok, time_hm_ok = [], [], []
+    x_hm_timeout, y_hm_timeout = [], []
+    x_hm_error, y_hm_error = [], []
+    for _row in heatmap_filtered:
+        _t = float(_row["time"])
+        if _t == TIMEOUT_SENTINEL:
+            x_hm_timeout.append(float(_row[x_var]))
+            y_hm_timeout.append(float(_row[y_var]))
+        elif _t == ERROR_SENTINEL:
+            x_hm_error.append(float(_row[x_var]))
+            y_hm_error.append(float(_row[y_var]))
+        else:
+            x_hm_ok.append(float(_row[x_var]))
+            y_hm_ok.append(float(_row[y_var]))
+            time_hm_ok.append(_t)
 
     heatmap_source = ColumnDataSource(
-        data={"x": x_vals_hm, "y": y_vals_hm, "time": time_vals_hm}
+        data={"x": x_hm_ok, "y": y_hm_ok, "time": time_hm_ok}
+    )
+    heatmap_timeout_source = ColumnDataSource(
+        data={"x": x_hm_timeout, "y": y_hm_timeout}
+    )
+    heatmap_error_source = ColumnDataSource(
+        data={"x": x_hm_error, "y": y_hm_error}
     )
     color_mapper = LinearColorMapper(
         palette=Viridis256,
-        low=min(time_vals_hm) if time_vals_hm else 0,
-        high=max(time_vals_hm) if time_vals_hm else 1,
+        low=min(time_hm_ok) if time_hm_ok else 0,
+        high=max(time_hm_ok) if time_hm_ok else 1,
     )
     heatmap_p = figure(
         title=f"Heatmap: {x_var} vs {y_var}",
@@ -128,6 +167,26 @@ def create_scatter_and_heatmap_html(data, output_html):
         source=heatmap_source,
         fill_color={"field": "time", "transform": color_mapper},
         line_color=None,
+    )
+    heatmap_p.rect(
+        "x",
+        "y",
+        width=1.1,
+        height=1.1,
+        source=heatmap_timeout_source,
+        fill_color="orange",
+        line_color=None,
+        legend_label="timeout",
+    )
+    heatmap_p.rect(
+        "x",
+        "y",
+        width=1.1,
+        height=1.1,
+        source=heatmap_error_source,
+        fill_color="red",
+        line_color=None,
+        legend_label="error",
     )
     color_bar = ColorBar(
         color_mapper=color_mapper, label_standoff=12, location=(0, 0), title="time"
@@ -148,6 +207,8 @@ def create_scatter_and_heatmap_html(data, output_html):
 
     # JS callbacks (scatter and heatmap)
     scatter_callback_code = """
+	var TIMEOUT_SENTINEL = -1e9;
+	var ERROR_SENTINEL = -2e9;
 	var x_var = x_select.value;
 	for (var i = 0; i < var_selects.length; i++) {
 		var_selects[i].disabled = (var_selects[i].title.replace('Fix ', '') === x_var);
@@ -159,8 +220,7 @@ def create_scatter_and_heatmap_html(data, output_html):
 			fixed[var_name] = var_selects[i].value;
 		}
 	}
-	var x_vals = [];
-	var time_vals = [];
+	var x_ok = [], time_ok = [], x_timeout = [], x_error = [];
 	for (var i = 0; i < all_data.length; i++) {
 		var row = all_data[i];
 		var match = true;
@@ -168,19 +228,30 @@ def create_scatter_and_heatmap_html(data, output_html):
 			if (row[k] != fixed[k]) match = false;
 		}
 		if (match) {
-			x_vals.push(parseFloat(row[x_var]));
-			time_vals.push(parseFloat(row['time']));
+			var t = parseFloat(row['time']);
+			if (t === TIMEOUT_SENTINEL) {
+				x_timeout.push(parseFloat(row[x_var]));
+			} else if (t === ERROR_SENTINEL) {
+				x_error.push(parseFloat(row[x_var]));
+			} else {
+				x_ok.push(parseFloat(row[x_var]));
+				time_ok.push(t);
+			}
 		}
 	}
-	scatter_source.data = {};
-	scatter_source.data['x'] = x_vals;
-	scatter_source.data['time'] = time_vals;
+	scatter_source.data = {x: x_ok, time: time_ok};
 	scatter_source.change.emit();
+	scatter_timeout_source.data = {x: x_timeout, time: new Array(x_timeout.length).fill(0.0)};
+	scatter_timeout_source.change.emit();
+	scatter_error_source.data = {x: x_error, time: new Array(x_error.length).fill(0.0)};
+	scatter_error_source.change.emit();
 	scatter_p.xaxis[0].axis_label = x_var;
 	scatter_p.title.text = "Scatter: " + x_var + " vs time";
 	"""
 
     heatmap_callback_code = """
+	var TIMEOUT_SENTINEL = -1e9;
+	var ERROR_SENTINEL = -2e9;
 	var x_var = x_select_hm.value;
 	var y_var = y_select_hm.value;
 	// Disable x and y variable dropdowns for fixed values
@@ -192,6 +263,10 @@ def create_scatter_and_heatmap_html(data, output_html):
 	if (x_var === y_var) {
 		heatmap_source.data = {x: [], y: [], time: []};
 		heatmap_source.change.emit();
+		heatmap_timeout_source.data = {x: [], y: []};
+		heatmap_timeout_source.change.emit();
+		heatmap_error_source.data = {x: [], y: []};
+		heatmap_error_source.change.emit();
 		heatmap_p.xaxis[0].axis_label = x_var;
 		heatmap_p.yaxis[0].axis_label = y_var;
 		heatmap_p.title.text = "Heatmap: " + x_var + " vs " + y_var;
@@ -204,9 +279,9 @@ def create_scatter_and_heatmap_html(data, output_html):
 			fixed[var_name] = heatmap_var_selects[i].value;
 		}
 	}
-	var x_vals = [];
-	var y_vals = [];
-	var time_vals = [];
+	var x_ok = [], y_ok = [], time_ok = [];
+	var x_timeout = [], y_timeout = [];
+	var x_error = [], y_error = [];
 	for (var i = 0; i < all_data.length; i++) {
 		var row = all_data[i];
 		var match = true;
@@ -214,16 +289,32 @@ def create_scatter_and_heatmap_html(data, output_html):
 			if (row[k] != fixed[k]) match = false;
 		}
 		if (match) {
-			x_vals.push(parseFloat(row[x_var]));
-			y_vals.push(parseFloat(row[y_var]));
-			time_vals.push(parseFloat(row['time']));
+			var t = parseFloat(row['time']);
+			if (t === TIMEOUT_SENTINEL) {
+				x_timeout.push(parseFloat(row[x_var]));
+				y_timeout.push(parseFloat(row[y_var]));
+			} else if (t === ERROR_SENTINEL) {
+				x_error.push(parseFloat(row[x_var]));
+				y_error.push(parseFloat(row[y_var]));
+			} else {
+				x_ok.push(parseFloat(row[x_var]));
+				y_ok.push(parseFloat(row[y_var]));
+				time_ok.push(t);
+			}
 		}
 	}
-	heatmap_source.data = {};
-	heatmap_source.data['x'] = x_vals;
-	heatmap_source.data['y'] = y_vals;
-	heatmap_source.data['time'] = time_vals;
+	heatmap_source.data = {x: x_ok, y: y_ok, time: time_ok};
 	heatmap_source.change.emit();
+	heatmap_timeout_source.data = {x: x_timeout, y: y_timeout};
+	heatmap_timeout_source.change.emit();
+	heatmap_error_source.data = {x: x_error, y: y_error};
+	heatmap_error_source.change.emit();
+	if (time_ok.length > 0) {
+		var min_t = Math.min.apply(null, time_ok);
+		var max_t = Math.max.apply(null, time_ok);
+		color_mapper.low = min_t;
+		color_mapper.high = max_t === min_t ? min_t + 1 : max_t;
+	}
 	heatmap_p.xaxis[0].axis_label = x_var;
 	heatmap_p.yaxis[0].axis_label = y_var;
 	heatmap_p.title.text = "Heatmap: " + x_var + " vs " + y_var;
@@ -236,6 +327,8 @@ def create_scatter_and_heatmap_html(data, output_html):
         "all_data": data,
         "scatter_p": scatter_p,
         "scatter_source": scatter_source,
+        "scatter_timeout_source": scatter_timeout_source,
+        "scatter_error_source": scatter_error_source,
     }
     x_select.js_on_change(
         "value", CustomJS(args=scatter_args, code=scatter_callback_code)
@@ -253,6 +346,9 @@ def create_scatter_and_heatmap_html(data, output_html):
         "all_data": data,
         "heatmap_p": heatmap_p,
         "heatmap_source": heatmap_source,
+        "heatmap_timeout_source": heatmap_timeout_source,
+        "heatmap_error_source": heatmap_error_source,
+        "color_mapper": color_mapper,
     }
     x_select_hm.js_on_change(
         "value", CustomJS(args=heatmap_args, code=heatmap_callback_code)

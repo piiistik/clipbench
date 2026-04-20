@@ -36,7 +36,7 @@ def test_c_runner_parses_ok_lines(monkeypatch):
     assert results == [0.1, 2.5]
 
 
-def test_c_runner_maps_timeout_and_error_to_sentinel(monkeypatch):
+def test_c_runner_maps_timeout_and_error_to_sentinels(monkeypatch):
     monkeypatch.setattr(
         c_runner, "_get_cmd_runner_path", lambda: "C:/fake/cmd_runner.exe"
     )
@@ -51,8 +51,8 @@ def test_c_runner_maps_timeout_and_error_to_sentinel(monkeypatch):
 
     assert results == [
         0.05,
-        c_runner.NON_SUCCESS_SENTINEL,
-        c_runner.NON_SUCCESS_SENTINEL,
+        c_runner.TIMEOUT_SENTINEL,
+        c_runner.ERROR_SENTINEL,
     ]
 
 
