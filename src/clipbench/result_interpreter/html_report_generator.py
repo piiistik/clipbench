@@ -51,11 +51,35 @@ def interpolate_nd_data(data, num_points=1000):
 
 
 def create_scatter_and_heatmap_html(data, output_html):
-    # Get all variable names except 'time'
-    all_vars = [k for k in data[0].keys() if k != "time"]
+    # Build variable schema from *_int columns when present, else fallback to legacy var_*.
+    keys = list(data[0].keys())
+    int_vars = [k for k in keys if k.endswith("_int")]
+    if int_vars:
+        all_vars = int_vars
+        value_map_by_var = {}
+        for var in all_vars:
+            value_key = var.replace("_int", "_value")
+            if value_key in keys:
+                mapping = {}
+                for row in data:
+                    mapping[row[var]] = row[value_key]
+                value_map_by_var[var] = mapping
+            else:
+                value_map_by_var[var] = {}
+    else:
+        all_vars = [k for k in keys if k != "time"]
+        value_map_by_var = {var: {} for var in all_vars}
+
     unique_vals = {var: sorted(set(row[var] for row in data)) for var in all_vars}
     x_var = all_vars[0]
     fixed_vars = {v: unique_vals[v][0] for v in all_vars if v != x_var}
+
+    def _axis_label(var_name: str) -> str:
+        return var_name.replace("_int", "") if var_name.endswith("_int") else var_name
+
+    def _axis_label_overrides(var_name: str) -> dict:
+        mapping = value_map_by_var.get(var_name, {})
+        return {float(k): str(v) for k, v in mapping.items()}
 
     def filter_data(x_var, fixed_vars):
         return [
@@ -82,10 +106,11 @@ def create_scatter_and_heatmap_html(data, output_html):
     scatter_error_source = ColumnDataSource(data={"x": x_error, "time": [0.0] * len(x_error)})
     scatter_p = figure(
         title=f"Scatter: {x_var} vs time",
-        x_axis_label=x_var,
+        x_axis_label=_axis_label(x_var),
         y_axis_label="time",
         tools="pan,wheel_zoom,box_zoom,reset,save",
     )
+    scatter_p.xaxis.major_label_overrides = _axis_label_overrides(x_var)
     scatter_p.scatter(
         "x", "time", source=scatter_source, size=8, color="navy", alpha=0.5
     )
@@ -155,10 +180,12 @@ def create_scatter_and_heatmap_html(data, output_html):
     )
     heatmap_p = figure(
         title=f"Heatmap: {x_var} vs {y_var}",
-        x_axis_label=x_var,
-        y_axis_label=y_var,
+        x_axis_label=_axis_label(x_var),
+        y_axis_label=_axis_label(y_var),
         tools="pan,wheel_zoom,box_zoom,reset,save",
     )
+    heatmap_p.xaxis.major_label_overrides = _axis_label_overrides(x_var)
+    heatmap_p.yaxis.major_label_overrides = _axis_label_overrides(y_var)
     heatmap_p.rect(
         "x",
         "y",
@@ -210,6 +237,20 @@ def create_scatter_and_heatmap_html(data, output_html):
 	var TIMEOUT_SENTINEL = -1e9;
 	var ERROR_SENTINEL = -2e9;
 	var x_var = x_select.value;
+    function axisLabel(var_name) {
+        return var_name.endsWith('_int') ? var_name.slice(0, -4) : var_name;
+    }
+    function axisLabelOverrides(var_name) {
+        var overrides = {};
+        for (var i = 0; i < all_data.length; i++) {
+            var row = all_data[i];
+            var value_key = var_name.endsWith('_int') ? var_name.replace('_int', '_value') : null;
+            if (value_key && row[value_key] !== undefined) {
+                overrides[parseFloat(row[var_name])] = String(row[value_key]);
+            }
+        }
+        return overrides;
+    }
 	for (var i = 0; i < var_selects.length; i++) {
 		var_selects[i].disabled = (var_selects[i].title.replace('Fix ', '') === x_var);
 	}
@@ -245,7 +286,8 @@ def create_scatter_and_heatmap_html(data, output_html):
 	scatter_timeout_source.change.emit();
 	scatter_error_source.data = {x: x_error, time: new Array(x_error.length).fill(0.0)};
 	scatter_error_source.change.emit();
-	scatter_p.xaxis[0].axis_label = x_var;
+    scatter_p.xaxis[0].axis_label = axisLabel(x_var);
+    scatter_p.xaxis[0].major_label_overrides = axisLabelOverrides(x_var);
 	scatter_p.title.text = "Scatter: " + x_var + " vs time";
 	"""
 
@@ -254,6 +296,20 @@ def create_scatter_and_heatmap_html(data, output_html):
 	var ERROR_SENTINEL = -2e9;
 	var x_var = x_select_hm.value;
 	var y_var = y_select_hm.value;
+    function axisLabel(var_name) {
+        return var_name.endsWith('_int') ? var_name.slice(0, -4) : var_name;
+    }
+    function axisLabelOverrides(var_name) {
+        var overrides = {};
+        for (var i = 0; i < all_data.length; i++) {
+            var row = all_data[i];
+            var value_key = var_name.endsWith('_int') ? var_name.replace('_int', '_value') : null;
+            if (value_key && row[value_key] !== undefined) {
+                overrides[parseFloat(row[var_name])] = String(row[value_key]);
+            }
+        }
+        return overrides;
+    }
 	// Disable x and y variable dropdowns for fixed values
 	for (var i = 0; i < heatmap_var_selects.length; i++) {
 		var vname = heatmap_var_selects[i].title.replace('Fix ', '');
@@ -267,8 +323,10 @@ def create_scatter_and_heatmap_html(data, output_html):
 		heatmap_timeout_source.change.emit();
 		heatmap_error_source.data = {x: [], y: []};
 		heatmap_error_source.change.emit();
-		heatmap_p.xaxis[0].axis_label = x_var;
-		heatmap_p.yaxis[0].axis_label = y_var;
+        heatmap_p.xaxis[0].axis_label = axisLabel(x_var);
+        heatmap_p.yaxis[0].axis_label = axisLabel(y_var);
+        heatmap_p.xaxis[0].major_label_overrides = axisLabelOverrides(x_var);
+        heatmap_p.yaxis[0].major_label_overrides = axisLabelOverrides(y_var);
 		heatmap_p.title.text = "Heatmap: " + x_var + " vs " + y_var;
 		return;
 	}
@@ -315,8 +373,10 @@ def create_scatter_and_heatmap_html(data, output_html):
 		color_mapper.low = min_t;
 		color_mapper.high = max_t === min_t ? min_t + 1 : max_t;
 	}
-	heatmap_p.xaxis[0].axis_label = x_var;
-	heatmap_p.yaxis[0].axis_label = y_var;
+    heatmap_p.xaxis[0].axis_label = axisLabel(x_var);
+    heatmap_p.yaxis[0].axis_label = axisLabel(y_var);
+    heatmap_p.xaxis[0].major_label_overrides = axisLabelOverrides(x_var);
+    heatmap_p.yaxis[0].major_label_overrides = axisLabelOverrides(y_var);
 	heatmap_p.title.text = "Heatmap: " + x_var + " vs " + y_var;
 	"""
 

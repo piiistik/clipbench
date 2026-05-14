@@ -6,6 +6,7 @@ from clipbench.configuration_converter.configuration_provider import (
     provide_configuration,
 )
 from clipbench.result_converter.result_saver import save_result
+from clipbench.result_converter.analysis_generator import save_analysis
 from clipbench.core.executor import Executor
 
 
@@ -25,7 +26,8 @@ def main():
     executor = Executor(configuration)
     searched = executor.execute(experiment)
 
-    save_result(searched, base / "result.csv")
+    save_result(searched, base / "result.csv", experiment.get_variable_values)
+    save_analysis(searched, base / "analysis.json", experiment)
 
 
 if __name__ == "__main__":

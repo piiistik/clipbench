@@ -1,4 +1,5 @@
 import random
+import math
 from typing import Optional
 
 from clipbench.core.search_method.search_method import SearchMethod
@@ -28,8 +29,11 @@ class RandomSample(SearchMethod):
         evaluator: Evaluator,
         budget: int,
     ):
+        max_points = math.prod((hi - lo + 1) for lo, hi in space_definition)
+        target_budget = min(budget, max_points)
+
         variable_vectors = []
-        while len(variable_vectors) < budget:
+        while len(variable_vectors) < target_budget:
             vector = self._generate_vector(space_definition)
             if vector not in variable_vectors:
                 variable_vectors.append(vector)

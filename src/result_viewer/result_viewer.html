@@ -209,6 +209,45 @@
       color: var(--muted);
     }
 
+    #analysisDisplay {
+      background: #f6fcfa;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      font-family: "Courier New", monospace;
+      font-size: 12px;
+      max-height: 280px;
+      overflow-y: auto;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    #analysisPlot {
+      width: 100%;
+      min-height: 320px;
+    }
+
+    .analysis-raw {
+      margin-top: 10px;
+    }
+
+    .analysis-raw > summary {
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 650;
+      margin-bottom: 8px;
+    }
+
+    .analysis-section {
+      display: none;
+    }
+
+    .analysis-section.active {
+      display: block;
+    }
+
     @media (max-width: 860px) {
       .chart-wrap,
       #plot {
@@ -228,6 +267,8 @@
       <div class="row">
         <label class="btn primary" for="csvInput">Load CSV</label>
         <input id="csvInput" type="file" accept=".csv,text/csv" />
+        <label class="btn primary" for="analysisInput">Load Analysis</label>
+        <input id="analysisInput" type="file" accept=".json,application/json" />
         <button id="resetBtn" class="ghost">Reset</button>
         <span class="hint" id="datasetSummary">No dataset loaded.</span>
       </div>
@@ -258,11 +299,21 @@
     <section class="panel chart-wrap">
       <div id="plot"></div>
     </section>
+
+    <section class="panel analysis-section" id="analysisSection">
+      <h2 style="margin-top: 0; font-size: 16px; color: var(--text);">Permutation Importance</h2>
+      <div id="analysisPlot"></div>
+      <details class="analysis-raw">
+        <summary>Raw JSON</summary>
+        <pre id="analysisDisplay"></pre>
+      </details>
+    </section>
   </main>
 
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
   <script>
     const csvInputEl = document.getElementById("csvInput");
+    const analysisInputEl = document.getElementById("analysisInput");
     const resetBtnEl = document.getElementById("resetBtn");
     const mode1dBtnEl = document.getElementById("mode1dBtn");
     const mode2dBtnEl = document.getElementById("mode2dBtn");
@@ -272,6 +323,9 @@
     const statusEl = document.getElementById("status");
     const datasetSummaryEl = document.getElementById("datasetSummary");
     const plotEl = document.getElementById("plot");
+    const analysisPlotEl = document.getElementById("analysisPlot");
+    const analysisDisplayEl = document.getElementById("analysisDisplay");
+    const analysisSectionEl = document.getElementById("analysisSection");
 
     const MODE_1D = "1d";
     const MODE_2D = "2d";
@@ -296,6 +350,126 @@
       setStatus("Load a CSV file to begin.");
       Plotly.purge(plotEl);
       plotEl.innerHTML = "";
+      Plotly.purge(analysisPlotEl);
+      analysisPlotEl.innerHTML = "";
+      analysisDisplayEl.textContent = "";
+      analysisSectionEl.classList.remove("active");
+    }
+
+    function normalizePermutationImportance(analysis) {
+      if (!analysis || typeof analysis !== "object") {
+        throw new Error("Analysis JSON must be an object.");
+      }
+
+      const variables = Array.isArray(analysis.variables) ? analysis.variables : null;
+      const means = Array.isArray(analysis.importances_mean) ? analysis.importances_mean : null;
+      const stds = Array.isArray(analysis.importances_std) ? analysis.importances_std : null;
+
+      if (!variables || !means) {
+        throw new Error("Invalid analysis JSON structure. Required fields: 'variables' and 'importances_mean'.");
+      }
+
+      if (variables.length !== means.length) {
+        throw new Error("'variables' and 'importances_mean' must have the same length.");
+      }
+
+      if (stds && stds.length !== variables.length) {
+        throw new Error("'importances_std' must have the same length as 'variables'.");
+      }
+
+      const rows = variables.map((name, idx) => {
+        const meanValue = Number(means[idx]);
+        const stdValue = stds ? Number(stds[idx]) : 0;
+
+        if (!Number.isFinite(meanValue)) {
+          throw new Error(`Non-numeric value in 'importances_mean' at index ${idx}.`);
+        }
+
+        if (!Number.isFinite(stdValue)) {
+          throw new Error(`Non-numeric value in 'importances_std' at index ${idx}.`);
+        }
+
+        return {
+          variable: String(name),
+          mean: meanValue,
+          std: Math.max(0, stdValue),
+        };
+      });
+
+      rows.sort((a, b) => b.mean - a.mean);
+      return rows;
+    }
+
+    function renderPermutationImportance(rows) {
+      const variables = rows.map(row => row.variable);
+      const means = rows.map(row => row.mean);
+      const stds = rows.map(row => row.std);
+
+      const trace = {
+        type: "bar",
+        orientation: "h",
+        y: variables,
+        x: means,
+        marker: {
+          color: "#0b8f73",
+          line: { color: "#08745d", width: 1 },
+        },
+        error_x: {
+          type: "data",
+          array: stds,
+          visible: stds.some(v => v > 0),
+          color: "#2a5b4f",
+          thickness: 1.3,
+          width: 5,
+        },
+        hovertemplate: "variable: %{y}<br>importance mean: %{x:.6f}<extra></extra>",
+      };
+
+      const maxMean = Math.max(...means);
+      const maxStd = Math.max(...stds, 0);
+      const axisMax = Math.max(0.01, maxMean + maxStd) * 1.12;
+
+      const layout = {
+        margin: { l: 140, r: 28, t: 42, b: 54 },
+        paper_bgcolor: "#ffffff",
+        plot_bgcolor: "#ffffff",
+        xaxis: {
+          title: { text: "Mean Permutation Importance", standoff: 12 },
+          zeroline: false,
+          gridcolor: "#e8efec",
+          rangemode: "tozero",
+          range: [0, axisMax],
+        },
+        yaxis: {
+          autorange: "reversed",
+          automargin: true,
+        },
+      };
+
+      Plotly.react(analysisPlotEl, [trace], layout, { responsive: true, displaylogo: false });
+    }
+
+    function loadAnalysisJson(text, filename) {
+      try {
+        const analysis = JSON.parse(text);
+
+        const normalizedRows = normalizePermutationImportance(analysis);
+        if (!normalizedRows.length) {
+          throw new Error("Analysis JSON has no variables to display.");
+        }
+
+        renderPermutationImportance(normalizedRows);
+
+        const formatted = JSON.stringify(analysis, null, 2);
+        analysisDisplayEl.textContent = formatted;
+        analysisSectionEl.classList.add("active");
+
+        const hasStd = normalizedRows.some(row => row.std > 0);
+        const stdLabel = hasStd ? " with std-dev error bars" : "";
+        setStatus(`Analysis loaded from ${filename}. ${normalizedRows.length} variables visualized${stdLabel}.`);
+      } catch (error) {
+        setStatus(`Could not load analysis: ${error.message}`, "error");
+      }
     }
 
     function parseCsvLine(line) {
@@ -349,12 +523,35 @@
         throw new Error("CSV must contain a 'time' column.");
       }
 
-      const variableIndices = headers
+      const intVariableIndices = headers
         .map((name, idx) => ({ name, idx }))
-        .filter(item => item.idx !== timeIndex);
+        .filter(item => item.idx !== timeIndex && item.name.endsWith("_int"));
+
+      const hasEnrichedSchema = intVariableIndices.length > 0;
+      const variableIndices = hasEnrichedSchema
+        ? intVariableIndices
+        : headers
+            .map((name, idx) => ({ name, idx }))
+            .filter(item => item.idx !== timeIndex);
 
       if (!variableIndices.length) {
         throw new Error("CSV must contain at least one variable column besides 'time'.");
+      }
+
+      const valueColumnByIntColumn = {};
+      if (hasEnrichedSchema) {
+        for (const { name } of variableIndices) {
+          const valueName = name.replace(/_int$/, "_value");
+          const valueIdx = headers.indexOf(valueName);
+          if (valueIdx >= 0) {
+            valueColumnByIntColumn[name] = valueIdx;
+          }
+        }
+      }
+
+      const labelByVariable = {};
+      for (const { name } of variableIndices) {
+        labelByVariable[name] = {};
       }
 
       const rows = [];
@@ -383,6 +580,14 @@
             break;
           }
           values[name] = value;
+
+          const valueIdx = valueColumnByIntColumn[name];
+          if (valueIdx !== undefined) {
+            const displayText = parsed[valueIdx];
+            if (displayText) {
+              labelByVariable[name][String(value)] = displayText;
+            }
+          }
         }
 
         if (!isValid) {
@@ -402,6 +607,45 @@
         variableNames: variableIndices.map(v => v.name),
         rows,
         skippedRows: skipped,
+        labelByVariable,
+      };
+    }
+
+    function axisTitle(name) {
+      return name.endsWith("_int") ? name.slice(0, -4) : name;
+    }
+
+    function tickTextForValues(varName, numericValues) {
+      const labelMap = (dataset && dataset.labelByVariable && dataset.labelByVariable[varName]) || {};
+      return numericValues.map(value => {
+        const key = String(value);
+        return Object.prototype.hasOwnProperty.call(labelMap, key) ? labelMap[key] : String(value);
+      });
+    }
+
+    function sampledTicks(varName, numericValues, maxTicks = 18) {
+      if (numericValues.length <= maxTicks) {
+        return {
+          vals: numericValues,
+          text: tickTextForValues(varName, numericValues),
+        };
+      }
+
+      const step = Math.ceil((numericValues.length - 1) / (maxTicks - 1));
+      const vals = [];
+
+      for (let i = 0; i < numericValues.length; i += step) {
+        vals.push(numericValues[i]);
+      }
+
+      const last = numericValues[numericValues.length - 1];
+      if (vals[vals.length - 1] !== last) {
+        vals.push(last);
+      }
+
+      return {
+        vals,
+        text: tickTextForValues(varName, vals),
       };
     }
 
@@ -455,6 +699,7 @@
 
       const xValues = Array.from(grouped.keys()).sort((a, b) => a - b);
       const yValues = xValues.map(x => mean(grouped.get(x)));
+      const xTicks = sampledTicks(xName, xValues);
 
       const trace = {
         type: "scatter",
@@ -463,16 +708,31 @@
         y: yValues,
         marker: { size: 6, color: "#0b8f73" },
         line: { width: 2, color: "#08745d" },
-        hovertemplate: `${xName}: %{x}<br>avg time: %{y:.6f}<extra></extra>`,
+        text: tickTextForValues(xName, xValues),
+        hovertemplate: `${axisTitle(xName)}: %{text}<br>coord: %{x}<br>avg time: %{y:.6f}<extra></extra>`,
       };
 
       const layout = {
-        title: `1D View: ${xName} vs time`,
-        margin: { l: 58, r: 24, t: 50, b: 52 },
+        title: `1D View: ${axisTitle(xName)} vs time`,
+        margin: { l: 58, r: 24, t: 50, b: 110 },
         paper_bgcolor: "#ffffff",
         plot_bgcolor: "#ffffff",
-        xaxis: { title: xName, zeroline: false, gridcolor: "#e8efec" },
-        yaxis: { title: "time", zeroline: false, gridcolor: "#e8efec" },
+        xaxis: {
+          title: { text: axisTitle(xName), standoff: 20 },
+          zeroline: false,
+          gridcolor: "#e8efec",
+          tickmode: "array",
+          tickvals: xTicks.vals,
+          ticktext: xTicks.text,
+          tickangle: -35,
+          automargin: true,
+        },
+        yaxis: {
+          title: { text: "time", standoff: 12 },
+          zeroline: false,
+          gridcolor: "#e8efec",
+          automargin: true,
+        },
       };
 
       Plotly.react(plotEl, [trace], layout, { responsive: true, displaylogo: false });
@@ -508,6 +768,7 @@
 
       const xValues = Array.from(new Set(Array.from(gridMap.values()).map(v => v.x))).sort((a, b) => a - b);
       const yValues = Array.from(new Set(Array.from(gridMap.values()).map(v => v.y))).sort((a, b) => a - b);
+      const xTicks = sampledTicks(xName, xValues);
 
       const xIndex = new Map(xValues.map((v, i) => [v, i]));
       const yIndex = new Map(yValues.map((v, i) => [v, i]));
@@ -527,16 +788,39 @@
         z,
         colorbar: { title: "avg time" },
         colorscale: "Viridis",
-        hovertemplate: `${xName}: %{x}<br>${yName}: %{y}<br>avg time: %{z:.6f}<extra></extra>`,
+        customdata: yValues.map(y => xValues.map(x => {
+          const xMap = (dataset.labelByVariable && dataset.labelByVariable[xName]) || {};
+          const yMap = (dataset.labelByVariable && dataset.labelByVariable[yName]) || {};
+          return [
+            Object.prototype.hasOwnProperty.call(xMap, String(x)) ? xMap[String(x)] : String(x),
+            Object.prototype.hasOwnProperty.call(yMap, String(y)) ? yMap[String(y)] : String(y),
+          ];
+        })),
+        hovertemplate: `${axisTitle(xName)}: %{customdata[0]}<br>${axisTitle(yName)}: %{customdata[1]}<br>coord: (%{x}, %{y})<br>avg time: %{z:.6f}<extra></extra>`,
       };
 
       const layout = {
-        title: `2D Heatmap: ${xName} vs ${yName}`,
-        margin: { l: 62, r: 24, t: 50, b: 55 },
+        title: `2D Heatmap: ${axisTitle(xName)} vs ${axisTitle(yName)}`,
+        margin: { l: 88, r: 24, t: 50, b: 120 },
         paper_bgcolor: "#ffffff",
         plot_bgcolor: "#ffffff",
-        xaxis: { title: xName, zeroline: false },
-        yaxis: { title: yName, zeroline: false },
+        xaxis: {
+          title: { text: axisTitle(xName), standoff: 20 },
+          zeroline: false,
+          tickmode: "array",
+          tickvals: xTicks.vals,
+          ticktext: xTicks.text,
+          tickangle: -35,
+          automargin: true,
+        },
+        yaxis: {
+          title: { text: axisTitle(yName), standoff: 12 },
+          zeroline: false,
+          tickmode: "array",
+          tickvals: yValues,
+          ticktext: tickTextForValues(yName, yValues),
+          automargin: true,
+        },
       };
 
       Plotly.react(plotEl, [trace], layout, { responsive: true, displaylogo: false });
@@ -577,6 +861,20 @@
         onCsvLoaded(text, file.name);
       } catch (error) {
         setStatus(`Could not load CSV: ${error.message}`, "error");
+      }
+
+      event.target.value = "";
+    });
+
+    analysisInputEl.addEventListener("change", async (event) => {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+
+      try {
+        const text = await file.text();
+        loadAnalysisJson(text, file.name);
+      } catch (error) {
+        setStatus(`Could not read analysis file: ${error.message}`, "error");
       }
 
       event.target.value = "";

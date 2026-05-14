@@ -16,16 +16,23 @@ def provide_result(csv_file: str) -> Dict[Tuple[int, ...], float | None]:
 
     with open(csv_file, "r", newline="") as f:
         reader = csv.reader(f)
+        header = next(reader, None)
+        if header is None:
+            return results
 
-        # Skip header row
-        next(reader, None)
+        int_indices = [
+            i for i, name in enumerate(header) if i != 0 and name.endswith("_int")
+        ]
+        has_new_schema = len(int_indices) > 0
 
         # Read each result row
         for row in reader:
             if row:
-                # First column is time (float), remaining columns are variables (ints)
                 time_value = float(row[0])
-                var_tuple = tuple(int(val) for val in row[1:])
+                if has_new_schema:
+                    var_tuple = tuple(int(row[i]) for i in int_indices)
+                else:
+                    var_tuple = tuple(int(val) for val in row[1:])
                 results[var_tuple] = time_value
 
     return results
