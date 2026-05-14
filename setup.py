@@ -79,9 +79,31 @@ class build_py(_build_py):
             ]
         )
 
+        # Compile example C batch programs into bin/ as standalone executables.
+        example_programs_dir = Path("examples/example_batch_programs")
+        if example_programs_dir.exists():
+            for c_src in sorted(example_programs_dir.glob("*.c")):
+                out_name = f"{c_src.stem}.exe" if sys.platform == "win32" else c_src.stem
+                out_path = bin_out_dir / out_name
+                print(f"[build] compiling {c_src} -> {out_path}")
+                subprocess.check_call(
+                    [
+                        "gcc",
+                        "-O2",
+                        "-std=c11",
+                        "-o",
+                        str(out_path),
+                        str(c_src),
+                        "-lm",
+                    ]
+                )
+
         # make executable on unix
         if sys.platform != "win32":
             bin_out.chmod(0o755)
+            for program in bin_out_dir.glob("*"):
+                if program.is_file() and program.suffix == "":
+                    program.chmod(0o755)
 
         super().run()
 

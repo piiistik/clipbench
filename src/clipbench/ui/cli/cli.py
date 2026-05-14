@@ -6,7 +6,6 @@ from clipbench.configuration_converter.configuration_provider import (
     provide_configuration,
 )
 from clipbench.result_converter.result_saver import save_result
-from clipbench.result_viewer.result_viewer import plot_heatmap
 from clipbench.core.executor import Executor
 
 
@@ -27,7 +26,6 @@ def main():
     searched = executor.execute(experiment)
 
     save_result(searched, base / "result.csv")
-    plot_heatmap(searched, base / "plot.jpg")
 
 
 if __name__ == "__main__":

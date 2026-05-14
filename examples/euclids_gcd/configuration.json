@@ -3,8 +3,7 @@
         "name": "c_runner"
     },
     "search_method_configuration": {
-        "name": "min_max_search",
-        "mode": "min"
+        "name": "grid_sample"
     },
-    "budget": 10
+    "budget": 1000
 }
