@@ -41,6 +41,10 @@ def save_analysis(
     X = np.array(vectors, dtype=np.float64)
     y = np.array([valid_results[v] for v in vectors], dtype=np.float64)
 
+    # Runtime data is typically skewed and multiplicative, so log scaling makes
+    # the analysis more stable and the importance scores more meaningful.
+    y = np.log1p(y)
+
     # Check if we have enough samples and variance
     if len(X) < 2:
         logger.warning(
