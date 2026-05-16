@@ -7,6 +7,22 @@ from setuptools import setup
 from setuptools.command.build_py import build_py as _build_py
 
 
+def _compute_data_files():
+    binary_suffix = ".exe" if sys.platform == "win32" else ""
+    bin_files = [
+        str(Path("bin") / f"cmd_runner{binary_suffix}"),
+        str(Path("bin") / "input_file_editor.html"),
+        str(Path("bin") / "result_viewer.html"),
+    ]
+
+    example_programs_dir = Path("examples/example_batch_programs")
+    if example_programs_dir.exists():
+        for c_src in sorted(example_programs_dir.glob("*.c")):
+            bin_files.append(str(Path("bin") / f"{c_src.stem}{binary_suffix}"))
+
+    return [("bin", bin_files)]
+
+
 class build_py(_build_py):
     def run(self):
         project_root = Path(__file__).parent
@@ -108,4 +124,4 @@ class build_py(_build_py):
         super().run()
 
 
-setup(cmdclass={"build_py": build_py})
+setup(cmdclass={"build_py": build_py}, data_files=_compute_data_files())
