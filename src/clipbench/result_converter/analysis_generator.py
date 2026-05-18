@@ -1,6 +1,7 @@
 import json
 import logging
-from typing import Dict, Tuple
+import math
+from typing import Dict, List, Tuple
 import numpy as np
 
 from clipbench.core.search_space import SearchSpace, VariableVector
@@ -91,6 +92,8 @@ def save_analysis(
             experiment, vectors[0], importance_mean, importance_std
         )
 
+    analysis["statistics"] = _compute_statistics(valid_results, experiment)
+
     # Write to JSON file
     with open(json_file, "w") as f:
         json.dump(analysis, f, indent=2)
@@ -132,4 +135,73 @@ def _create_analysis_output(
         "variables": variable_names,
         "importances_mean": importance_mean_normalized.tolist(),
         "importances_std": importance_std_normalized.tolist(),
+    }
+
+
+_MAX_OUTLIER_CONFIGS = 20
+
+
+def _compute_statistics(
+    valid_results: SearchSpace,
+    experiment: Experiment,
+) -> Dict:
+    """
+    Compute benchmark statistics from an evaluated search space.
+
+    Returns a dictionary containing summary statistics (min, max, mean, median),
+    IQR-based outlier groups with the configurations that produced them, and
+    coverage of the search space.
+    """
+    times = np.array(list(valid_results.values()), dtype=np.float64)
+    vectors: List[VariableVector] = list(valid_results.keys())
+
+    min_idx = int(np.argmin(times))
+    max_idx = int(np.argmax(times))
+
+    q1, median, q3 = np.percentile(times, [25, 50, 75])
+    iqr = float(q3 - q1)
+    low_threshold = float(q1 - 1.5 * iqr)
+    high_threshold = float(q3 + 1.5 * iqr)
+
+    def _config_entry(vector: VariableVector, time: float) -> Dict:
+        return {
+            "time": float(time),
+            "config_ints": list(vector),
+            "config_values": list(experiment.get_variable_values(vector)),
+        }
+
+    low_pairs = sorted(
+        [(v, t) for v, t in valid_results.items() if t < low_threshold],
+        key=lambda x: x[1],
+    )
+    high_pairs = sorted(
+        [(v, t) for v, t in valid_results.items() if t > high_threshold],
+        key=lambda x: x[1],
+        reverse=True,
+    )
+
+    space_definition = experiment.get_search_space_definition()
+    total_space_size = math.prod(max_int + 1 for _, max_int in space_definition)
+    coverage = len(valid_results) / total_space_size if total_space_size > 0 else 0.0
+
+    return {
+        "sample_count": len(valid_results),
+        "coverage": coverage,
+        "min": _config_entry(vectors[min_idx], times[min_idx]),
+        "max": _config_entry(vectors[max_idx], times[max_idx]),
+        "mean": float(np.mean(times)),
+        "median": float(median),
+        "q1": float(q1),
+        "q3": float(q3),
+        "iqr": iqr,
+        "low_outliers": {
+            "count": len(low_pairs),
+            "threshold": low_threshold,
+            "configs": [_config_entry(v, t) for v, t in low_pairs[:_MAX_OUTLIER_CONFIGS]],
+        },
+        "high_outliers": {
+            "count": len(high_pairs),
+            "threshold": high_threshold,
+            "configs": [_config_entry(v, t) for v, t in high_pairs[:_MAX_OUTLIER_CONFIGS]],
+        },
     }

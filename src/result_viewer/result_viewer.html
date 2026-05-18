@@ -225,7 +225,7 @@
 
     #analysisPlot {
       width: 100%;
-      min-height: 320px;
+      min-height: 420px;
     }
 
     .analysis-raw {
@@ -246,6 +246,96 @@
 
     .analysis-section.active {
       display: block;
+    }
+
+    #statsDisplay {
+      margin-top: 18px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    @media (max-width: 640px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .stat-card {
+      background: #f6fcfa;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+    }
+
+    .stat-card .sc-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .stat-card .sc-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--accent);
+      line-height: 1.1;
+    }
+
+    .stat-card .sc-sub {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 3px;
+      word-break: break-all;
+    }
+
+    .outlier-group {
+      margin-bottom: 12px;
+    }
+
+    .outlier-group > summary {
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 650;
+      margin-bottom: 8px;
+    }
+
+    .outlier-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .outlier-table th {
+      text-align: left;
+      padding: 5px 8px;
+      border-bottom: 2px solid var(--border);
+      color: var(--muted);
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.04em;
+    }
+
+    .outlier-table td {
+      padding: 5px 8px;
+      border-bottom: 1px solid var(--border);
+      font-family: "Courier New", monospace;
+    }
+
+    .outlier-table tr:nth-child(even) td {
+      background: #f6fcfa;
+    }
+
+    .outlier-none {
+      color: var(--muted);
+      font-size: 13px;
+      padding: 6px 0;
     }
 
     @media (max-width: 860px) {
@@ -303,6 +393,49 @@
     <section class="panel analysis-section" id="analysisSection">
       <h2 style="margin-top: 0; font-size: 16px; color: var(--text);">Permutation Importance</h2>
       <div id="analysisPlot"></div>
+
+      <div id="statsDisplay" style="display:none">
+        <h3 style="font-size: 14px; color: var(--text); margin: 18px 0 10px;">Benchmark Statistics</h3>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="sc-label">Sample Count</div>
+            <div class="sc-value" id="statSampleCount">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="sc-label">Coverage</div>
+            <div class="sc-value" id="statCoverage">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="sc-label">Mean</div>
+            <div class="sc-value" id="statMean">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="sc-label">Median</div>
+            <div class="sc-value" id="statMedian">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="sc-label">Min</div>
+            <div class="sc-value" id="statMin">—</div>
+            <div class="sc-sub" id="statMinConfig"></div>
+          </div>
+          <div class="stat-card">
+            <div class="sc-label">Max</div>
+            <div class="sc-value" id="statMax">—</div>
+            <div class="sc-sub" id="statMaxConfig"></div>
+          </div>
+        </div>
+
+        <details class="outlier-group" id="lowOutlierDetails">
+          <summary id="lowOutlierSummary">Low Outliers</summary>
+          <div id="lowOutlierContent"></div>
+        </details>
+
+        <details class="outlier-group" id="highOutlierDetails">
+          <summary id="highOutlierSummary">High Outliers</summary>
+          <div id="highOutlierContent"></div>
+        </details>
+      </div>
+
       <details class="analysis-raw">
         <summary>Raw JSON</summary>
         <pre id="analysisDisplay"></pre>
@@ -326,6 +459,19 @@
     const analysisPlotEl = document.getElementById("analysisPlot");
     const analysisDisplayEl = document.getElementById("analysisDisplay");
     const analysisSectionEl = document.getElementById("analysisSection");
+    const statsDisplayEl = document.getElementById("statsDisplay");
+    const statSampleCountEl = document.getElementById("statSampleCount");
+    const statCoverageEl = document.getElementById("statCoverage");
+    const statMeanEl = document.getElementById("statMean");
+    const statMedianEl = document.getElementById("statMedian");
+    const statMinEl = document.getElementById("statMin");
+    const statMinConfigEl = document.getElementById("statMinConfig");
+    const statMaxEl = document.getElementById("statMax");
+    const statMaxConfigEl = document.getElementById("statMaxConfig");
+    const lowOutlierSummaryEl = document.getElementById("lowOutlierSummary");
+    const lowOutlierContentEl = document.getElementById("lowOutlierContent");
+    const highOutlierSummaryEl = document.getElementById("highOutlierSummary");
+    const highOutlierContentEl = document.getElementById("highOutlierContent");
 
     const MODE_1D = "1d";
     const MODE_2D = "2d";
@@ -354,6 +500,9 @@
       analysisPlotEl.innerHTML = "";
       analysisDisplayEl.textContent = "";
       analysisSectionEl.classList.remove("active");
+      statsDisplayEl.style.display = "none";
+      lowOutlierContentEl.innerHTML = "";
+      highOutlierContentEl.innerHTML = "";
     }
 
     function normalizePermutationImportance(analysis) {
@@ -449,6 +598,86 @@
       Plotly.react(analysisPlotEl, [trace], layout, { responsive: true, displaylogo: false });
     }
 
+    function _fmtTime(seconds) {
+      if (!Number.isFinite(seconds)) return "—";
+      if (seconds >= 1) return seconds.toFixed(3) + " s";
+      if (seconds >= 0.001) return (seconds * 1000).toFixed(2) + " ms";
+      return (seconds * 1e6).toFixed(1) + " µs";
+    }
+
+    function _buildOutlierTable(outlierGroup, numVars) {
+      if (!outlierGroup || outlierGroup.count === 0) {
+        const p = document.createElement("p");
+        p.className = "outlier-none";
+        p.textContent = "No outliers found.";
+        return p;
+      }
+      const table = document.createElement("table");
+      table.className = "outlier-table";
+      const thead = table.createTHead();
+      const hrow = thead.insertRow();
+      const timeHeader = document.createElement("th");
+      timeHeader.textContent = "Time";
+      hrow.appendChild(timeHeader);
+      for (let i = 1; i <= numVars; i++) {
+        const th = document.createElement("th");
+        th.textContent = `var_${i}`;
+        hrow.appendChild(th);
+      }
+      const tbody = table.createTBody();
+      for (const cfg of outlierGroup.configs) {
+        const row = tbody.insertRow();
+        const td = row.insertCell();
+        td.textContent = _fmtTime(cfg.time);
+        const vals = Array.isArray(cfg.config_values) ? cfg.config_values : cfg.config_ints;
+        for (const val of vals) {
+          const cell = row.insertCell();
+          cell.textContent = String(val);
+        }
+      }
+      const remaining = outlierGroup.count - outlierGroup.configs.length;
+      if (remaining > 0) {
+        const note = document.createElement("p");
+        note.className = "outlier-none";
+        note.textContent = `… and ${remaining} more (capped at ${outlierGroup.configs.length} displayed).`;
+        const wrapper = document.createElement("div");
+        wrapper.appendChild(table);
+        wrapper.appendChild(note);
+        return wrapper;
+      }
+      return table;
+    }
+
+    function renderStatistics(stats, numVars) {
+      statSampleCountEl.textContent = stats.sample_count.toLocaleString();
+      const coveragePct = (stats.coverage * 100).toFixed(1) + "%";
+      statCoverageEl.textContent = coveragePct;
+      statMeanEl.textContent = _fmtTime(stats.mean);
+      statMedianEl.textContent = _fmtTime(stats.median);
+      statMinEl.textContent = _fmtTime(stats.min.time);
+      statMinConfigEl.textContent = Array.isArray(stats.min.config_values)
+        ? stats.min.config_values.join(" ") : "";
+      statMaxEl.textContent = _fmtTime(stats.max.time);
+      statMaxConfigEl.textContent = Array.isArray(stats.max.config_values)
+        ? stats.max.config_values.join(" ") : "";
+
+      const loThresh = Number.isFinite(stats.low_outliers.threshold)
+        ? ` — threshold: ${_fmtTime(stats.low_outliers.threshold)}` : "";
+      lowOutlierSummaryEl.textContent =
+        `Low Outliers (${stats.low_outliers.count} found${loThresh})`;
+      lowOutlierContentEl.innerHTML = "";
+      lowOutlierContentEl.appendChild(_buildOutlierTable(stats.low_outliers, numVars));
+
+      const hiThresh = Number.isFinite(stats.high_outliers.threshold)
+        ? ` — threshold: ${_fmtTime(stats.high_outliers.threshold)}` : "";
+      highOutlierSummaryEl.textContent =
+        `High Outliers (${stats.high_outliers.count} found${hiThresh})`;
+      highOutlierContentEl.innerHTML = "";
+      highOutlierContentEl.appendChild(_buildOutlierTable(stats.high_outliers, numVars));
+
+      statsDisplayEl.style.display = "block";
+    }
+
     function loadAnalysisJson(text, filename) {
       try {
         const analysis = JSON.parse(text);
@@ -459,6 +688,12 @@
         }
 
         renderPermutationImportance(normalizedRows);
+
+        if (analysis.statistics && typeof analysis.statistics === "object") {
+          renderStatistics(analysis.statistics, normalizedRows.length);
+        } else {
+          statsDisplayEl.style.display = "none";
+        }
 
         const formatted = JSON.stringify(analysis, null, 2);
         analysisDisplayEl.textContent = formatted;
@@ -728,7 +963,7 @@
           automargin: true,
         },
         yaxis: {
-          title: { text: "time", standoff: 12 },
+          title: { text: "time (s)", standoff: 12 },
           zeroline: false,
           gridcolor: "#e8efec",
           automargin: true,
@@ -768,10 +1003,19 @@
 
       const xValues = Array.from(new Set(Array.from(gridMap.values()).map(v => v.x))).sort((a, b) => a - b);
       const yValues = Array.from(new Set(Array.from(gridMap.values()).map(v => v.y))).sort((a, b) => a - b);
-      const xTicks = sampledTicks(xName, xValues);
+      const xTicks = sampledTicks(xName, xValues, 14);
+      const yTicks = sampledTicks(yName, yValues, 10);
+      const xPositions = xValues.map((_, index) => index);
+      const yPositions = yValues.map((_, index) => index);
 
       const xIndex = new Map(xValues.map((v, i) => [v, i]));
       const yIndex = new Map(yValues.map((v, i) => [v, i]));
+      const xTickPositions = xTicks.vals
+        .map(v => xIndex.get(v))
+        .filter(v => v !== undefined);
+      const yTickPositions = yTicks.vals
+        .map(v => yIndex.get(v))
+        .filter(v => v !== undefined);
 
       const z = yValues.map(() => xValues.map(() => null));
 
@@ -783,20 +1027,22 @@
 
       const trace = {
         type: "heatmap",
-        x: xValues,
-        y: yValues,
+        x: xPositions,
+        y: yPositions,
         z,
-        colorbar: { title: "avg time" },
+        colorbar: { title: "avg time (s)" },
         colorscale: "Viridis",
-        customdata: yValues.map(y => xValues.map(x => {
+        customdata: yValues.map((y) => xValues.map((x) => {
           const xMap = (dataset.labelByVariable && dataset.labelByVariable[xName]) || {};
           const yMap = (dataset.labelByVariable && dataset.labelByVariable[yName]) || {};
           return [
             Object.prototype.hasOwnProperty.call(xMap, String(x)) ? xMap[String(x)] : String(x),
             Object.prototype.hasOwnProperty.call(yMap, String(y)) ? yMap[String(y)] : String(y),
+            x,
+            y,
           ];
         })),
-        hovertemplate: `${axisTitle(xName)}: %{customdata[0]}<br>${axisTitle(yName)}: %{customdata[1]}<br>coord: (%{x}, %{y})<br>avg time: %{z:.6f}<extra></extra>`,
+        hovertemplate: `${axisTitle(xName)}: %{customdata[0]}<br>${axisTitle(yName)}: %{customdata[1]}<br>coord: (%{customdata[2]}, %{customdata[3]})<br>avg time: %{z:.6f}<extra></extra>`,
       };
 
       const layout = {
@@ -808,17 +1054,19 @@
           title: { text: axisTitle(xName), standoff: 20 },
           zeroline: false,
           tickmode: "array",
-          tickvals: xTicks.vals,
+          tickvals: xTickPositions,
           ticktext: xTicks.text,
           tickangle: -35,
+          range: [-0.5, xPositions.length - 0.5],
           automargin: true,
         },
         yaxis: {
           title: { text: axisTitle(yName), standoff: 12 },
           zeroline: false,
           tickmode: "array",
-          tickvals: yValues,
-          ticktext: tickTextForValues(yName, yValues),
+          tickvals: yTickPositions,
+          ticktext: yTicks.text,
+          range: [-0.5, yPositions.length - 0.5],
           automargin: true,
         },
       };

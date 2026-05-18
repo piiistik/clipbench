@@ -1,4 +1,6 @@
 from enum import Enum
+import math
+import bisect
 from .search_method import SearchMethod
 from clipbench.core.registry import (
     register_search_method as register_instance,
@@ -26,6 +28,7 @@ class LocalExtremaSearch(SearchMethod):
         budget_fraction_per_iteration: float = 0.1,
         spread_of_search: float = 1.0,
         localization_radius: float = 0.1,
+        candidate_pool_ratio: float = 0.25,
         sampler_type: str = "random_sample",
         sampler_config: Optional[dict] = None,
     ):
@@ -37,6 +40,7 @@ class LocalExtremaSearch(SearchMethod):
         self._budget_fraction_per_iteration = budget_fraction_per_iteration
         self._spread_of_search = spread_of_search
         self._localization_radius = localization_radius
+        self._candidate_pool_ratio = max(0.01, min(1.0, candidate_pool_ratio))
 
     def _create_sampler(
         self, sampler_type: str, sampler_config: dict, seed: Optional[int]
@@ -56,21 +60,45 @@ class LocalExtremaSearch(SearchMethod):
         evaluator: Evaluator,
         budget: int,
     ):
+        remaining_budget = budget
+
         first_budget = max(1, int(budget * self._budget_fraction_per_iteration))
-        remaining_budget = budget - first_budget
-        iter_budget = max(1, remaining_budget // self._number_of_iterations)
+        first_budget = min(first_budget, remaining_budget)
+        used_budget = self._first_iteration(
+            space_definition, search_space, evaluator, first_budget
+        )
+        remaining_budget -= used_budget
 
-        self._first_iteration(space_definition, search_space, evaluator, budget)
+        for iteration_index in range(self._number_of_iterations):
+            if remaining_budget <= 0:
+                break
 
-        for _ in range(self._number_of_iterations):
-            candidates = self._select_candidates(search_space)
-            self._iteration(space_definition, search_space, evaluator, iter_budget, candidates)
+            iterations_left = self._number_of_iterations - iteration_index
+            iter_budget = max(1, remaining_budget // iterations_left)
+            candidate_limit = max(1, int(iter_budget * self._candidate_pool_ratio))
+            candidates = self._select_candidates(
+                search_space, max_candidates=candidate_limit
+            )
+            if not candidates:
+                break
 
-    def _select_candidates(self, search_space: SearchSpace) -> List[VariableVector]:
+            used_budget = self._iteration(
+                space_definition, search_space, evaluator, iter_budget, candidates
+            )
+            remaining_budget -= used_budget
+
+    def _select_candidates(
+        self,
+        search_space: SearchSpace,
+        max_candidates: Optional[int] = None,
+    ) -> List[VariableVector]:
         evaluated = [(v, e) for v, e in search_space.items() if e is not None]
         reverse = self._search_target == SearchTarget.MAX
         evaluated.sort(key=lambda x: x[1], reverse=reverse)
-        return [v for v, _ in evaluated]
+        ordered = [v for v, _ in evaluated]
+        if max_candidates is None:
+            return ordered
+        return ordered[: max(0, max_candidates)]
 
     def _first_iteration(
         self,
@@ -78,9 +106,11 @@ class LocalExtremaSearch(SearchMethod):
         search_space: SearchSpace,
         evaluator: Evaluator,
         budget: int,
-    ):
-        sample_budget = max(1, int(budget * self._budget_fraction_per_iteration))
+    ) -> int:
+        sample_budget = budget
+        before = len(search_space)
         self._sampler.run(space_definition, search_space, evaluator, sample_budget)
+        return max(0, len(search_space) - before)
 
     def _iteration(
         self,
@@ -89,22 +119,47 @@ class LocalExtremaSearch(SearchMethod):
         evaluator: Evaluator,
         budget: int,
         candidates: List[VariableVector],
-    ):
-        n_new = max(1, int(len(candidates) * self._spread_of_search))
+    ) -> int:
+        if budget <= 0 or not candidates:
+            return 0
+
+        max_points = math.prod((hi - lo + 1) for lo, hi in space_definition)
+        available = max(0, max_points - len(search_space))
+        target_budget = min(budget, available)
+        if target_budget <= 0:
+            return 0
+
+        n_new = min(target_budget, max(0, int(len(candidates) * self._spread_of_search)))
         new_candidates = [
             self._random_sampler._generate_vector(space_definition) for _ in range(n_new)
         ]
         all_candidates = candidates + new_candidates
+        if not all_candidates:
+            return 0
 
-        budget_per_candidate = max(1, budget // len(all_candidates))
+        # Favor top-ranked incumbents while still allowing exploration around random additions.
+        rank_weights = [max(1, len(all_candidates) - rank) for rank in range(len(all_candidates))]
+        cumulative_weights = []
+        running = 0
+        for weight in rank_weights:
+            running += weight
+            cumulative_weights.append(running)
+
         vectors_to_evaluate = []
-        for candidate in all_candidates:
-            for _ in range(budget_per_candidate):
-                vector = self._sample_around(candidate, space_definition)
-                if vector not in search_space and vector not in vectors_to_evaluate:
-                    vectors_to_evaluate.append(vector)
+        max_attempts = max(100, target_budget * 30)
+        attempts = 0
+        while len(vectors_to_evaluate) < target_budget and attempts < max_attempts:
+            pick = self._random_sampler._generator.randint(1, cumulative_weights[-1])
+            candidate_index = bisect.bisect_left(cumulative_weights, pick)
+            candidate = all_candidates[candidate_index]
+            vector = self._sample_around(candidate, space_definition)
+            if vector not in search_space and vector not in vectors_to_evaluate:
+                vectors_to_evaluate.append(vector)
+            attempts += 1
 
-        evaluator.evaluate(vectors_to_evaluate)
+        if vectors_to_evaluate:
+            evaluator.evaluate(vectors_to_evaluate)
+        return len(vectors_to_evaluate)
 
     def _sample_around(
         self, candidate: VariableVector, space_definition: SpaceDefinition
@@ -126,6 +181,7 @@ def factory_local_extrema_search(configuration: dict) -> LocalExtremaSearch:
         budget_fraction_per_iteration=configuration.get("budget_fraction_per_iteration", 0.1),
         spread_of_search=configuration.get("spread_of_search", 1.0),
         localization_radius=configuration.get("localization_radius", 0.1),
+        candidate_pool_ratio=configuration.get("candidate_pool_ratio", 0.25),
         sampler_type=configuration.get("sampler_type", "random_sample"),
         sampler_config=configuration.get("sampler_config", {}),
     )
@@ -163,6 +219,11 @@ def configuration_local_extrema_search() -> dict:
             "type": "float",
             "description": "Relative radius (per dimension) within which to sample around each candidate",
             "default": 0.1,
+        },
+        "candidate_pool_ratio": {
+            "type": "float",
+            "description": "Fraction of iter_budget used as elite candidate pool size for local refinement",
+            "default": 0.25,
         },
         "sampler_type": {
             "type": "str",

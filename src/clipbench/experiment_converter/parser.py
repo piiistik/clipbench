@@ -88,7 +88,7 @@ class Float:
     def from_xml(cls, element: ET.Element) -> FloatVar:
         min_val = float(element.attrib["min"])
         max_val = float(element.attrib["max"])
-        accuracy = float(element.attrib.get("accuracy", 1e-2))
+        accuracy = float(element.attrib.get("step", element.attrib.get("accuracy", 1e-2)))
         return FloatVar(min=min_val, max=max_val, accuracy=accuracy)
 
 
