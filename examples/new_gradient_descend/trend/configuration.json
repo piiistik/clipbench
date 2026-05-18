@@ -6,12 +6,17 @@
         "name": "trend_search",
         "random_seed": 42,
         "number_of_iterations": 14,
-        "budget_fraction_initial": 0.06,
+        "budget_fraction_initial": 0.1,
         "k_neighbors": 2,
         "max_neighbor_distance": 0.12,
         "max_pairs_per_iteration": 8,
+        "steepness_percentile_threshold": 0.6,
+        "min_effective_distance": 0.02,
+        "fallback_strategy": "refine",
+        "refine_zone_radius": 0.1,
+        "refine_zone_sample_count": 5,
         "sampler_type": "random_sample",
         "sampler_config": {}
     },
-    "budget": 2048
+    "budget": 5000
 }
