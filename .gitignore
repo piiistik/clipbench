@@ -8,4 +8,4 @@ __pycache__/
 *NOTE*
 .vscode/
 temp/
-bin/
+build/

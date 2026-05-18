@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Parts>
     <Static>
-        .\bin\root_finding_broken.exe
+        .\build\root_finding_broken.exe
     </Static>
     
     <Dynamic prefix="--a ">

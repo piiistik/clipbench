@@ -8,10 +8,10 @@ import pytest
 @pytest.mark.skipif(sys.platform != "win32", reason="cmd_runner is Windows-only")
 def test_cmd_runner_executes_first_command_twice_but_reports_once(tmp_path: Path):
     repo_root = Path(__file__).resolve().parents[2]
-    runner_path = repo_root / "bin" / "cmd_runner.exe"
+    runner_path = repo_root / "build" / "cmd_runner.exe"
 
     if not runner_path.exists():
-        pytest.skip("cmd_runner.exe not found in bin/")
+        pytest.skip("cmd_runner.exe not found in build/")
 
     marker_file = tmp_path / "warmup_marker.txt"
 

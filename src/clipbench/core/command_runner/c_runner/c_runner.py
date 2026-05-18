@@ -18,15 +18,15 @@ OVERHEAD_CALIBRATION_COMMAND = "echo"
 
 def _get_cmd_runner_path():
     """
-    Return the absolute path to cmd_runner executable installed in the bin folder.
+    Return the absolute path to cmd_runner executable installed in the build folder.
     """
     name = "cmd_runner.exe" if sys.platform == "win32" else "cmd_runner"
 
     candidates = [
         # Source checkout layout.
-        Path(__file__).resolve().parents[5] / "bin" / name,
+        Path(__file__).resolve().parents[5] / "build" / name,
         # User-site install layout on Windows (e.g. AppData/Roaming/Python/bin).
-        Path(__file__).resolve().parents[6] / "bin" / name,
+        Path(__file__).resolve().parents[6] / "build" / name,
         # Virtualenv/global install fallback.
         Path(sys.prefix) / "bin" / name,
         # Scripts path fallback (primarily for Windows venv installs).

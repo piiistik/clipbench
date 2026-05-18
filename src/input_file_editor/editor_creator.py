@@ -38,7 +38,8 @@ html_output = template.render(
 )
 
 # Write output
-output_path = template_dir / ".." / ".." / "bin" / "input_file_editor.html"
+output_path = template_dir / ".." / ".." / "build" / "input_file_editor.html"
+output_path.parent.mkdir(parents=True, exist_ok=True)
 output_path.write_text(html_output, encoding="utf-8")
 
 print(f"Generated {output_path}")
