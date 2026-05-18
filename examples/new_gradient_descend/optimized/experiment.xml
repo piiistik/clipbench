@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Parts>
+    <Static>
+        .\bin\new_gradient_descend.exe
+    </Static>
+    
+    <Dynamic prefix="--a ">
+        <Int min="-20" max="20" step="1"/>
+    </Dynamic>
+
+    <Dynamic prefix="--b ">
+        <Int min="-20" max="20" step="1"/>
+    </Dynamic>
+
+    <Static>
+        --delay 1
+    </Static>
+</Parts>

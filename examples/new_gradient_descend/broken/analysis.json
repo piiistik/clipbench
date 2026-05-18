@@ -1,0 +1,497 @@
+{
+  "variables": [
+    "var_1",
+    "var_2"
+  ],
+  "importances_mean": [
+    0.4473889473533155,
+    0.5526110526466845
+  ],
+  "importances_std": [
+    0.02179751541260571,
+    0.024885043441299985
+  ],
+  "statistics": {
+    "sample_count": 1681,
+    "coverage": 1.0,
+    "min": {
+      "time": 0.077505,
+      "config_ints": [
+        16,
+        20
+      ],
+      "config_values": [
+        "--a -4",
+        "--b 0"
+      ]
+    },
+    "max": {
+      "time": 0.516706,
+      "config_ints": [
+        36,
+        4
+      ],
+      "config_values": [
+        "--a 16",
+        "--b -16"
+      ]
+    },
+    "mean": 0.17372119631171926,
+    "median": 0.173871,
+    "q1": 0.156181,
+    "q3": 0.189919,
+    "iqr": 0.03373800000000002,
+    "low_outliers": {
+      "count": 139,
+      "threshold": 0.10557399999999996,
+      "configs": [
+        {
+          "time": 0.077505,
+          "config_ints": [
+            16,
+            20
+          ],
+          "config_values": [
+            "--a -4",
+            "--b 0"
+          ]
+        },
+        {
+          "time": 0.077754,
+          "config_ints": [
+            20,
+            12
+          ],
+          "config_values": [
+            "--a 0",
+            "--b -8"
+          ]
+        },
+        {
+          "time": 0.077909,
+          "config_ints": [
+            38,
+            20
+          ],
+          "config_values": [
+            "--a 18",
+            "--b 0"
+          ]
+        },
+        {
+          "time": 0.078092,
+          "config_ints": [
+            20,
+            31
+          ],
+          "config_values": [
+            "--a 0",
+            "--b 11"
+          ]
+        },
+        {
+          "time": 0.078221,
+          "config_ints": [
+            8,
+            20
+          ],
+          "config_values": [
+            "--a -12",
+            "--b 0"
+          ]
+        },
+        {
+          "time": 0.078226,
+          "config_ints": [
+            32,
+            20
+          ],
+          "config_values": [
+            "--a 12",
+            "--b 0"
+          ]
+        },
+        {
+          "time": 0.078255,
+          "config_ints": [
+            28,
+            20
+          ],
+          "config_values": [
+            "--a 8",
+            "--b 0"
+          ]
+        },
+        {
+          "time": 0.078258,
+          "config_ints": [
+            30,
+            20
+          ],
+          "config_values": [
+            "--a 10",
+            "--b 0"
+          ]
+        },
+        {
+          "time": 0.078285,
+          "config_ints": [
+            2,
+            20
+          ],
+          "config_values": [
+            "--a -18",
+            "--b 0"
+          ]
+        },
+        {
+          "time": 0.078377,
+          "config_ints": [
+            33,
+            20
+          ],
+          "config_values": [
+            "--a 13",
+            "--b 0"
+          ]
+        },
+        {
+          "time": 0.078518,
+          "config_ints": [
+            35,
+            20
+          ],
+          "config_values": [
+            "--a 15",
+            "--b 0"
+          ]
+        },
+        {
+          "time": 0.078581,
+          "config_ints": [
+            12,
+            20
+          ],
+          "config_values": [
+            "--a -8",
+            "--b 0"
+          ]
+        },
+        {
+          "time": 0.078589,
+          "config_ints": [
+            20,
+            23
+          ],
+          "config_values": [
+            "--a 0",
+            "--b 3"
+          ]
+        },
+        {
+          "time": 0.07868,
+          "config_ints": [
+            20,
+            30
+          ],
+          "config_values": [
+            "--a 0",
+            "--b 10"
+          ]
+        },
+        {
+          "time": 0.07878,
+          "config_ints": [
+            3,
+            20
+          ],
+          "config_values": [
+            "--a -17",
+            "--b 0"
+          ]
+        },
+        {
+          "time": 0.07878,
+          "config_ints": [
+            20,
+            11
+          ],
+          "config_values": [
+            "--a 0",
+            "--b -9"
+          ]
+        },
+        {
+          "time": 0.078786,
+          "config_ints": [
+            36,
+            20
+          ],
+          "config_values": [
+            "--a 16",
+            "--b 0"
+          ]
+        },
+        {
+          "time": 0.078849,
+          "config_ints": [
+            20,
+            26
+          ],
+          "config_values": [
+            "--a 0",
+            "--b 6"
+          ]
+        },
+        {
+          "time": 0.078881,
+          "config_ints": [
+            39,
+            20
+          ],
+          "config_values": [
+            "--a 19",
+            "--b 0"
+          ]
+        },
+        {
+          "time": 0.078884,
+          "config_ints": [
+            20,
+            18
+          ],
+          "config_values": [
+            "--a 0",
+            "--b -2"
+          ]
+        }
+      ]
+    },
+    "high_outliers": {
+      "count": 41,
+      "threshold": 0.24052600000000002,
+      "configs": [
+        {
+          "time": 0.516706,
+          "config_ints": [
+            36,
+            4
+          ],
+          "config_values": [
+            "--a 16",
+            "--b -16"
+          ]
+        },
+        {
+          "time": 0.488041,
+          "config_ints": [
+            0,
+            25
+          ],
+          "config_values": [
+            "--a -20",
+            "--b 5"
+          ]
+        },
+        {
+          "time": 0.474406,
+          "config_ints": [
+            40,
+            25
+          ],
+          "config_values": [
+            "--a 20",
+            "--b 5"
+          ]
+        },
+        {
+          "time": 0.471395,
+          "config_ints": [
+            36,
+            15
+          ],
+          "config_values": [
+            "--a 16",
+            "--b -5"
+          ]
+        },
+        {
+          "time": 0.45866,
+          "config_ints": [
+            36,
+            25
+          ],
+          "config_values": [
+            "--a 16",
+            "--b 5"
+          ]
+        },
+        {
+          "time": 0.454499,
+          "config_ints": [
+            40,
+            15
+          ],
+          "config_values": [
+            "--a 20",
+            "--b -5"
+          ]
+        },
+        {
+          "time": 0.453276,
+          "config_ints": [
+            15,
+            25
+          ],
+          "config_values": [
+            "--a -5",
+            "--b 5"
+          ]
+        },
+        {
+          "time": 0.445781,
+          "config_ints": [
+            10,
+            25
+          ],
+          "config_values": [
+            "--a -10",
+            "--b 5"
+          ]
+        },
+        {
+          "time": 0.445031,
+          "config_ints": [
+            30,
+            25
+          ],
+          "config_values": [
+            "--a 10",
+            "--b 5"
+          ]
+        },
+        {
+          "time": 0.441746,
+          "config_ints": [
+            9,
+            15
+          ],
+          "config_values": [
+            "--a -11",
+            "--b -5"
+          ]
+        },
+        {
+          "time": 0.441174,
+          "config_ints": [
+            9,
+            25
+          ],
+          "config_values": [
+            "--a -11",
+            "--b 5"
+          ]
+        },
+        {
+          "time": 0.439517,
+          "config_ints": [
+            10,
+            15
+          ],
+          "config_values": [
+            "--a -10",
+            "--b -5"
+          ]
+        },
+        {
+          "time": 0.439464,
+          "config_ints": [
+            4,
+            25
+          ],
+          "config_values": [
+            "--a -16",
+            "--b 5"
+          ]
+        },
+        {
+          "time": 0.438439,
+          "config_ints": [
+            0,
+            15
+          ],
+          "config_values": [
+            "--a -20",
+            "--b -5"
+          ]
+        },
+        {
+          "time": 0.436079,
+          "config_ints": [
+            30,
+            15
+          ],
+          "config_values": [
+            "--a 10",
+            "--b -5"
+          ]
+        },
+        {
+          "time": 0.43571,
+          "config_ints": [
+            4,
+            15
+          ],
+          "config_values": [
+            "--a -16",
+            "--b -5"
+          ]
+        },
+        {
+          "time": 0.431467,
+          "config_ints": [
+            30,
+            36
+          ],
+          "config_values": [
+            "--a 10",
+            "--b 16"
+          ]
+        },
+        {
+          "time": 0.429896,
+          "config_ints": [
+            31,
+            15
+          ],
+          "config_values": [
+            "--a 11",
+            "--b -5"
+          ]
+        },
+        {
+          "time": 0.426558,
+          "config_ints": [
+            25,
+            25
+          ],
+          "config_values": [
+            "--a 5",
+            "--b 5"
+          ]
+        },
+        {
+          "time": 0.425848,
+          "config_ints": [
+            40,
+            4
+          ],
+          "config_values": [
+            "--a 20",
+            "--b -16"
+          ]
+        }
+      ]
+    }
+  }
+}

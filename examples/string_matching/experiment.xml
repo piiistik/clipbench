@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Parts>
+    <Static>
+        .\bin\string_matching.exe
+    </Static>
+    
+    <Dynamic prefix="--text-len ">
+        <Int min="100000" max="10000000" step="100000"/>
+    </Dynamic>
+
+    <Dynamic prefix="--pattern-len ">
+        <Int min="4" max="64" step="2"/>
+    </Dynamic>
+
+    <Dynamic prefix="--alphabet ">
+        <Int min="2" max="64" step="2"/>
+    </Dynamic>
+
+    <Dynamic prefix="--mutation-rate ">
+        <Float min="0" max="0.5" step="0.05"/>
+    </Dynamic>
+
+    <Static>
+        --seed 42
+    </Static>
+
+    <Static>
+        --delay 0
+    </Static>
+</Parts>

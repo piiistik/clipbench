@@ -1,0 +1,370 @@
+{
+  "variables": [
+    "var_1",
+    "var_2",
+    "var_3",
+    "var_4"
+  ],
+  "importances_mean": [
+    0.7236178071700938,
+    0.0448565765858911,
+    0.20109681413556627,
+    0.030428802108448918
+  ],
+  "importances_std": [
+    0.008447677911884244,
+    0.005645557126265419,
+    0.00839989855436591,
+    0.0024675539488033835
+  ],
+  "statistics": {
+    "sample_count": 10000,
+    "coverage": 0.0019765970904490828,
+    "min": {
+      "time": 0.048089,
+      "config_ints": [
+        0,
+        6,
+        6,
+        20
+      ],
+      "config_values": [
+        "--text-len 100000",
+        "--pattern-len 16",
+        "--alphabet 14",
+        "--mutation-rate 0.20"
+      ]
+    },
+    "max": {
+      "time": 0.763231,
+      "config_ints": [
+        44,
+        6,
+        9,
+        35
+      ],
+      "config_values": [
+        "--text-len 4500000",
+        "--pattern-len 16",
+        "--alphabet 20",
+        "--mutation-rate 0.35"
+      ]
+    },
+    "mean": 0.0997325013,
+    "median": 0.095179,
+    "q1": 0.07888575,
+    "q3": 0.1113365,
+    "iqr": 0.03245075,
+    "low_outliers": {
+      "count": 0,
+      "threshold": 0.030209625000000004,
+      "configs": []
+    },
+    "high_outliers": {
+      "count": 221,
+      "threshold": 0.16001262500000002,
+      "configs": [
+        {
+          "time": 0.763231,
+          "config_ints": [
+            44,
+            6,
+            9,
+            35
+          ],
+          "config_values": [
+            "--text-len 4500000",
+            "--pattern-len 16",
+            "--alphabet 20",
+            "--mutation-rate 0.35"
+          ]
+        },
+        {
+          "time": 0.255877,
+          "config_ints": [
+            66,
+            12,
+            0,
+            0
+          ],
+          "config_values": [
+            "--text-len 6700000",
+            "--pattern-len 28",
+            "--alphabet 2",
+            "--mutation-rate 0.00"
+          ]
+        },
+        {
+          "time": 0.254533,
+          "config_ints": [
+            44,
+            6,
+            24,
+            25
+          ],
+          "config_values": [
+            "--text-len 4500000",
+            "--pattern-len 16",
+            "--alphabet 50",
+            "--mutation-rate 0.25"
+          ]
+        },
+        {
+          "time": 0.23875,
+          "config_ints": [
+            77,
+            3,
+            0,
+            50
+          ],
+          "config_values": [
+            "--text-len 7800000",
+            "--pattern-len 10",
+            "--alphabet 2",
+            "--mutation-rate 0.50"
+          ]
+        },
+        {
+          "time": 0.235013,
+          "config_ints": [
+            66,
+            3,
+            0,
+            25
+          ],
+          "config_values": [
+            "--text-len 6700000",
+            "--pattern-len 10",
+            "--alphabet 2",
+            "--mutation-rate 0.25"
+          ]
+        },
+        {
+          "time": 0.221549,
+          "config_ints": [
+            66,
+            27,
+            0,
+            40
+          ],
+          "config_values": [
+            "--text-len 6700000",
+            "--pattern-len 58",
+            "--alphabet 2",
+            "--mutation-rate 0.40"
+          ]
+        },
+        {
+          "time": 0.220047,
+          "config_ints": [
+            77,
+            9,
+            0,
+            30
+          ],
+          "config_values": [
+            "--text-len 7800000",
+            "--pattern-len 22",
+            "--alphabet 2",
+            "--mutation-rate 0.30"
+          ]
+        },
+        {
+          "time": 0.206931,
+          "config_ints": [
+            77,
+            15,
+            0,
+            25
+          ],
+          "config_values": [
+            "--text-len 7800000",
+            "--pattern-len 34",
+            "--alphabet 2",
+            "--mutation-rate 0.25"
+          ]
+        },
+        {
+          "time": 0.206865,
+          "config_ints": [
+            77,
+            9,
+            0,
+            0
+          ],
+          "config_values": [
+            "--text-len 7800000",
+            "--pattern-len 22",
+            "--alphabet 2",
+            "--mutation-rate 0.00"
+          ]
+        },
+        {
+          "time": 0.206823,
+          "config_ints": [
+            77,
+            15,
+            0,
+            30
+          ],
+          "config_values": [
+            "--text-len 7800000",
+            "--pattern-len 34",
+            "--alphabet 2",
+            "--mutation-rate 0.30"
+          ]
+        },
+        {
+          "time": 0.206585,
+          "config_ints": [
+            77,
+            3,
+            0,
+            40
+          ],
+          "config_values": [
+            "--text-len 7800000",
+            "--pattern-len 10",
+            "--alphabet 2",
+            "--mutation-rate 0.40"
+          ]
+        },
+        {
+          "time": 0.205858,
+          "config_ints": [
+            77,
+            15,
+            0,
+            15
+          ],
+          "config_values": [
+            "--text-len 7800000",
+            "--pattern-len 34",
+            "--alphabet 2",
+            "--mutation-rate 0.15"
+          ]
+        },
+        {
+          "time": 0.205536,
+          "config_ints": [
+            77,
+            6,
+            0,
+            35
+          ],
+          "config_values": [
+            "--text-len 7800000",
+            "--pattern-len 16",
+            "--alphabet 2",
+            "--mutation-rate 0.35"
+          ]
+        },
+        {
+          "time": 0.205212,
+          "config_ints": [
+            77,
+            15,
+            0,
+            40
+          ],
+          "config_values": [
+            "--text-len 7800000",
+            "--pattern-len 34",
+            "--alphabet 2",
+            "--mutation-rate 0.40"
+          ]
+        },
+        {
+          "time": 0.204999,
+          "config_ints": [
+            77,
+            15,
+            0,
+            20
+          ],
+          "config_values": [
+            "--text-len 7800000",
+            "--pattern-len 34",
+            "--alphabet 2",
+            "--mutation-rate 0.20"
+          ]
+        },
+        {
+          "time": 0.204951,
+          "config_ints": [
+            77,
+            12,
+            0,
+            40
+          ],
+          "config_values": [
+            "--text-len 7800000",
+            "--pattern-len 28",
+            "--alphabet 2",
+            "--mutation-rate 0.40"
+          ]
+        },
+        {
+          "time": 0.204788,
+          "config_ints": [
+            77,
+            15,
+            0,
+            45
+          ],
+          "config_values": [
+            "--text-len 7800000",
+            "--pattern-len 34",
+            "--alphabet 2",
+            "--mutation-rate 0.45"
+          ]
+        },
+        {
+          "time": 0.204566,
+          "config_ints": [
+            77,
+            12,
+            0,
+            15
+          ],
+          "config_values": [
+            "--text-len 7800000",
+            "--pattern-len 28",
+            "--alphabet 2",
+            "--mutation-rate 0.15"
+          ]
+        },
+        {
+          "time": 0.203811,
+          "config_ints": [
+            77,
+            15,
+            0,
+            0
+          ],
+          "config_values": [
+            "--text-len 7800000",
+            "--pattern-len 34",
+            "--alphabet 2",
+            "--mutation-rate 0.00"
+          ]
+        },
+        {
+          "time": 0.193389,
+          "config_ints": [
+            77,
+            0,
+            12,
+            50
+          ],
+          "config_values": [
+            "--text-len 7800000",
+            "--pattern-len 4",
+            "--alphabet 26",
+            "--mutation-rate 0.50"
+          ]
+        }
+      ]
+    }
+  }
+}

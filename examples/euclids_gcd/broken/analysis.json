@@ -4,11 +4,273 @@
     "var_2"
   ],
   "importances_mean": [
-    0.36078408463844724,
-    0.6392159153615529
+    0.4844625091639371,
+    0.5155374908360628
   ],
   "importances_std": [
-    0.023976039559824074,
-    0.034518027558598424
-  ]
+    0.01475614949605376,
+    0.023309036592211157
+  ],
+  "statistics": {
+    "sample_count": 1000,
+    "coverage": 0.1,
+    "min": {
+      "time": 0.063495,
+      "config_ints": [
+        0,
+        0
+      ],
+      "config_values": [
+        "--a 1",
+        "--b 1"
+      ]
+    },
+    "max": {
+      "time": 15.97981,
+      "config_ints": [
+        990,
+        0
+      ],
+      "config_values": [
+        "--a 991",
+        "--b 1"
+      ]
+    },
+    "mean": 2.42666211,
+    "median": 1.568583,
+    "q1": 0.84560975,
+    "q3": 2.75556175,
+    "iqr": 1.909952,
+    "low_outliers": {
+      "count": 0,
+      "threshold": -2.01931825,
+      "configs": []
+    },
+    "high_outliers": {
+      "count": 93,
+      "threshold": 5.62048975,
+      "configs": [
+        {
+          "time": 15.97981,
+          "config_ints": [
+            990,
+            0
+          ],
+          "config_values": [
+            "--a 991",
+            "--b 1"
+          ]
+        },
+        {
+          "time": 15.779211,
+          "config_ints": [
+            980,
+            0
+          ],
+          "config_values": [
+            "--a 981",
+            "--b 1"
+          ]
+        },
+        {
+          "time": 15.54458,
+          "config_ints": [
+            960,
+            0
+          ],
+          "config_values": [
+            "--a 961",
+            "--b 1"
+          ]
+        },
+        {
+          "time": 15.341052,
+          "config_ints": [
+            970,
+            0
+          ],
+          "config_values": [
+            "--a 971",
+            "--b 1"
+          ]
+        },
+        {
+          "time": 15.203575,
+          "config_ints": [
+            950,
+            0
+          ],
+          "config_values": [
+            "--a 951",
+            "--b 1"
+          ]
+        },
+        {
+          "time": 14.925022,
+          "config_ints": [
+            940,
+            0
+          ],
+          "config_values": [
+            "--a 941",
+            "--b 1"
+          ]
+        },
+        {
+          "time": 14.91355,
+          "config_ints": [
+            930,
+            0
+          ],
+          "config_values": [
+            "--a 931",
+            "--b 1"
+          ]
+        },
+        {
+          "time": 14.784396,
+          "config_ints": [
+            920,
+            0
+          ],
+          "config_values": [
+            "--a 921",
+            "--b 1"
+          ]
+        },
+        {
+          "time": 14.589817,
+          "config_ints": [
+            910,
+            0
+          ],
+          "config_values": [
+            "--a 911",
+            "--b 1"
+          ]
+        },
+        {
+          "time": 14.330927,
+          "config_ints": [
+            900,
+            0
+          ],
+          "config_values": [
+            "--a 901",
+            "--b 1"
+          ]
+        },
+        {
+          "time": 14.209608,
+          "config_ints": [
+            890,
+            0
+          ],
+          "config_values": [
+            "--a 891",
+            "--b 1"
+          ]
+        },
+        {
+          "time": 14.150136,
+          "config_ints": [
+            880,
+            0
+          ],
+          "config_values": [
+            "--a 881",
+            "--b 1"
+          ]
+        },
+        {
+          "time": 13.976241,
+          "config_ints": [
+            870,
+            0
+          ],
+          "config_values": [
+            "--a 871",
+            "--b 1"
+          ]
+        },
+        {
+          "time": 13.639399,
+          "config_ints": [
+            860,
+            0
+          ],
+          "config_values": [
+            "--a 861",
+            "--b 1"
+          ]
+        },
+        {
+          "time": 13.519978,
+          "config_ints": [
+            850,
+            0
+          ],
+          "config_values": [
+            "--a 851",
+            "--b 1"
+          ]
+        },
+        {
+          "time": 13.317217,
+          "config_ints": [
+            840,
+            0
+          ],
+          "config_values": [
+            "--a 841",
+            "--b 1"
+          ]
+        },
+        {
+          "time": 13.274052,
+          "config_ints": [
+            830,
+            0
+          ],
+          "config_values": [
+            "--a 831",
+            "--b 1"
+          ]
+        },
+        {
+          "time": 13.055724,
+          "config_ints": [
+            820,
+            0
+          ],
+          "config_values": [
+            "--a 821",
+            "--b 1"
+          ]
+        },
+        {
+          "time": 12.906075,
+          "config_ints": [
+            810,
+            0
+          ],
+          "config_values": [
+            "--a 811",
+            "--b 1"
+          ]
+        },
+        {
+          "time": 12.725315,
+          "config_ints": [
+            800,
+            0
+          ],
+          "config_values": [
+            "--a 801",
+            "--b 1"
+          ]
+        }
+      ]
+    }
+  }
 }

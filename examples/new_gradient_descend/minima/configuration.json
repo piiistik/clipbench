@@ -1,0 +1,18 @@
+{
+    "command_runner_configuration": {
+        "name": "c_runner"
+    },
+    "search_method_configuration": {
+        "name": "local_extrema_search",
+        "search_target": "min",
+        "random_seed": 42,
+        "number_of_iterations": 5,
+        "budget_fraction_per_iteration": 0.2,
+        "spread_of_search": 0.3,
+        "localization_radius": 0.01,
+        "candidate_pool_ratio": 0.2,
+        "sampler_type": "random_sample",
+        "sampler_config": {}
+    },
+    "budget": 2048
+}

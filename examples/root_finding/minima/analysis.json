@@ -1,0 +1,55 @@
+{
+  "variables": [
+    "var_1",
+    "var_2"
+  ],
+  "importances_mean": [
+    0.4965706021205011,
+    0.5034293978794989
+  ],
+  "importances_std": [
+    0.006536884801790146,
+    0.012112581224221989
+  ],
+  "statistics": {
+    "sample_count": 4805,
+    "coverage": 0.11893269968565134,
+    "min": {
+      "time": 0.138515,
+      "config_ints": [
+        102,
+        101
+      ],
+      "config_values": [
+        "--a 2.00",
+        "--b 1.00"
+      ]
+    },
+    "max": {
+      "time": 0.515377,
+      "config_ints": [
+        114,
+        8
+      ],
+      "config_values": [
+        "--a 14.00",
+        "--b -92.00"
+      ]
+    },
+    "mean": 0.3285424337148803,
+    "median": 0.345578,
+    "q1": 0.266458,
+    "q3": 0.391781,
+    "iqr": 0.12532300000000002,
+    "low_outliers": {
+      "count": 0,
+      "threshold": 0.07847349999999995,
+      "configs": []
+    },
+    "high_outliers": {
+      "count": 0,
+      "threshold": 0.5797655,
+      "configs": []
+    }
+  }
+}

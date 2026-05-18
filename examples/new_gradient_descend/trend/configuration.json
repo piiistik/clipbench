@@ -1,0 +1,17 @@
+{
+    "command_runner_configuration": {
+        "name": "c_runner"
+    },
+    "search_method_configuration": {
+        "name": "trend_search",
+        "random_seed": 42,
+        "number_of_iterations": 14,
+        "budget_fraction_initial": 0.06,
+        "k_neighbors": 2,
+        "max_neighbor_distance": 0.12,
+        "max_pairs_per_iteration": 8,
+        "sampler_type": "random_sample",
+        "sampler_config": {}
+    },
+    "budget": 2048
+}

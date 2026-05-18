@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Parts>
+    <Static>
+        .\bin\merge_sort_broken.exe
+    </Static>
+    
+    <Dynamic prefix="--n ">
+        <Int min="1000" max="10000" step="100"/>
+    </Dynamic>
+
+    <Dynamic prefix="--pct ">
+        <Int min="0" max="100" step="10"/>
+    </Dynamic>
+
+    <Static>
+        --delay 2
+    </Static>
+</Parts>

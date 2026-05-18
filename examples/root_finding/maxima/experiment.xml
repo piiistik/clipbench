@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Parts>
+    <Static>
+        .\bin\root_finding_broken.exe
+    </Static>
+    
+    <Dynamic prefix="--a ">
+        <Float min="-100" max="100" step="1"/>
+    </Dynamic>
+
+    <Dynamic prefix="--b ">
+        <Float min="-100" max="100" step="1"/>
+    </Dynamic>
+
+    <Static>
+        --delay 1
+    </Static>
+</Parts>

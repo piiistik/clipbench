@@ -34,10 +34,13 @@
 #define MAX_ITERS 1000
 #define STEP_SIZE  0.02
 
-static void sleep_ms(unsigned int ms) {
+static void sleep_ms(double delay_ms) {
+    if (delay_ms <= 0.0) return;
+    
+    unsigned long delay_ns = (unsigned long)(delay_ms * 1000000.0 + 0.5);
     struct timespec req;
-    req.tv_sec = ms / 1000U;
-    req.tv_nsec = (long)(ms % 1000U) * 1000000L;
+    req.tv_sec = delay_ns / 1000000000UL;
+    req.tv_nsec = (long)(delay_ns % 1000000000UL);
 
     while (nanosleep(&req, &req) == -1 && errno == EINTR) {
         /* continue sleeping */
@@ -79,13 +82,13 @@ static void usage(const char *prog) {
         "\n"
         "  --a      initial x value\n"
         "  --b      initial y value\n"
-        "  --delay  sleep this many milliseconds after each iteration\n",
+        "  --delay  sleep this many milliseconds (float) after each iteration\n",
         prog);
 }
 
 int main(int argc, char **argv) {
     double x = 0.0, y = 0.0;
-    unsigned int delay_ms = 0;
+    double delay_ms = 0.0;
     int have_a = 0, have_b = 0;
 
     static struct option long_opts[] = {
@@ -109,12 +112,12 @@ int main(int argc, char **argv) {
                 break;
             case 'd': {
                 char *end = NULL;
-                unsigned long v = strtoul(optarg, &end, 10);
+                double v = strtod(optarg, &end);
                 if (end == optarg || *end != '\0') {
                     fprintf(stderr, "Invalid --delay value: %s\n", optarg);
                     return 1;
                 }
-                delay_ms = (unsigned int)v;
+                delay_ms = v;
                 break;
             }
             case 'h':
