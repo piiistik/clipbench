@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Parts>
     <Static>
-        .\bin\string_matching.exe
+        build\string_matching.exe
     </Static>
     
     <Dynamic prefix="--text-len ">

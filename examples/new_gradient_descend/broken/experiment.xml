@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Parts>
     <Static>
-        .\bin\new_gradient_descend_broken.exe
+        build\new_gradient_descend_broken.exe
     </Static>
     
     <Dynamic prefix="--a ">

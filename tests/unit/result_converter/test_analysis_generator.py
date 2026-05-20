@@ -178,6 +178,31 @@ def test_save_analysis_different_variable_counts():
         assert analysis["variables"] == ["var_1", "var_2", "var_3"]
 
 
+def test_save_analysis_with_negative_sentinel_values():
+    """Test sentinel negative values are excluded from log-transformed modeling."""
+    results = {
+        (0, 0): 1.0,
+        (1, 0): 2.0,
+        (2, 0): -1e9,  # timeout sentinel
+        (0, 1): -2e9,  # error sentinel
+        (1, 1): 3.5,
+    }
+    experiment = MockExperiment(num_vars=2)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        json_file = os.path.join(tmpdir, "analysis.json")
+        save_analysis(results, json_file, experiment)
+
+        assert os.path.exists(json_file)
+
+        with open(json_file, "r") as f:
+            analysis = json.load(f)
+
+    assert len(analysis["importances_mean"]) == 2
+    assert len(analysis["importances_std"]) == 2
+    assert analysis["statistics"]["sample_count"] == 5
+
+
 # ---------------------------------------------------------------------------
 # _compute_statistics unit tests
 # ---------------------------------------------------------------------------

@@ -1,18 +1,17 @@
+from jinja2 import Environment, FileSystemLoader
+import json
+from pathlib import Path
+
 from clipbench.core.registry import (
     get_command_runner_configurations,
     get_search_method_configurations,
 )
-from clipbench.core import search_method
-from clipbench.core import command_runner
-import json
-from pathlib import Path
-from jinja2 import Environment, FileSystemLoader
 
-# Get configurations from registry (no transformation needed)
+# Get configurations from registry of clipbench core
+# These configurations will be injected into the HTML template using Jinja2
 runner_configs = get_command_runner_configurations()
 method_configs = get_search_method_configurations()
 
-# Prepare template variables
 first_runner = next(iter(runner_configs.keys())) if runner_configs else "c_runner"
 first_method = next(iter(method_configs.keys())) if method_configs else "grid_sample"
 

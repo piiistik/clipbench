@@ -4,6 +4,8 @@ import math
 from typing import Dict, List, Tuple
 import numpy as np
 
+"""Generate analysis summaries and statistics from benchmark results."""
+
 from clipbench.core.search_space import SearchSpace, VariableVector
 from clipbench.experiment.experiment import Experiment
 
@@ -15,17 +17,7 @@ def save_analysis(
     json_file: str,
     experiment: Experiment,
 ) -> None:
-    """
-    Analyze search results using permutation importance and save to JSON.
-
-    Trains a RandomForest model on the search space and computes permutation importance
-    for each variable. Results are saved to a JSON file with normalized importance scores.
-
-    Args:
-        results: Evaluated search space (Dict[VariableVector, Evaluation])
-        json_file: Path to output analysis.json file
-        experiment: Experiment instance for variable metadata
-    """
+    """Compute variable importance and statistics, then save them as JSON."""
     # Filter out None values from results
     valid_results = {
         vector: time_value
@@ -37,60 +29,83 @@ def save_analysis(
         logger.warning("No valid results to analyze. Skipping analysis.")
         return
 
-    # Convert to numpy arrays for sklearn
-    vectors = list(valid_results.keys())
-    X = np.array(vectors, dtype=np.float64)
-    y = np.array([valid_results[v] for v in vectors], dtype=np.float64)
-
-    # Runtime data is typically skewed and multiplicative, so log scaling makes
-    # the analysis more stable and the importance scores more meaningful.
-    y = np.log1p(y)
-
     # Check if we have enough samples and variance
-    if len(X) < 2:
+    if len(valid_results) < 2:
         logger.warning(
             "Insufficient samples for analysis (need at least 2). Skipping analysis."
         )
         return
 
-    if np.std(y) == 0:
-        logger.warning("No variance in results. Setting all importances to zero.")
-        num_vars = len(vectors[0])
+    analyzable_results = {
+        vector: time_value
+        for vector, time_value in valid_results.items()
+        if np.isfinite(time_value) and time_value > -1.0
+    }
+
+    if len(analyzable_results) < len(valid_results):
+        logger.warning(
+            "Skipping %d non-finite or non-positive runtime values for importance analysis.",
+            len(valid_results) - len(analyzable_results),
+        )
+
+    sample_vector = next(iter(valid_results.keys()))
+
+    if len(analyzable_results) < 2:
+        logger.warning(
+            "Insufficient analyzable samples after filtering invalid runtimes. Setting all importances to zero."
+        )
+        num_vars = len(sample_vector)
         analysis = _create_analysis_output(
-            experiment, vectors[0], np.zeros(num_vars), np.zeros(num_vars)
+            experiment, sample_vector, np.zeros(num_vars), np.zeros(num_vars)
         )
     else:
-        # Train RandomForest and compute permutation importance
-        try:
-            from sklearn.ensemble import RandomForestRegressor
-            from sklearn.inspection import permutation_importance
-        except ImportError:
-            logger.error(
-                "scikit-learn is required for analysis. Install with: pip install scikit-learn"
+        # Convert to numpy arrays for sklearn
+        vectors = list(analyzable_results.keys())
+        X = np.array(vectors, dtype=np.float64)
+        y = np.array([analyzable_results[v] for v in vectors], dtype=np.float64)
+
+        # Runtime data is typically skewed and multiplicative, so log scaling makes
+        # the analysis more stable and the importance scores more meaningful.
+        y = np.log1p(y)
+
+        if np.std(y) == 0:
+            logger.warning("No variance in analyzable results. Setting all importances to zero.")
+            num_vars = len(sample_vector)
+            analysis = _create_analysis_output(
+                experiment, sample_vector, np.zeros(num_vars), np.zeros(num_vars)
             )
-            return
+        else:
+            # Train RandomForest and compute permutation importance
+            try:
+                from sklearn.ensemble import RandomForestRegressor
+                from sklearn.inspection import permutation_importance
+            except ImportError:
+                logger.error(
+                    "scikit-learn is required for analysis. Install with: pip install scikit-learn"
+                )
+                return
 
-        model = RandomForestRegressor(
-            n_estimators=100, random_state=42, n_jobs=-1, max_depth=10
-        )
-        model.fit(X, y)
+            model = RandomForestRegressor(
+                n_estimators=100, random_state=42, n_jobs=-1, max_depth=10
+            )
+            model.fit(X, y)
 
-        result = permutation_importance(
-            model, X, y, n_repeats=10, random_state=42, n_jobs=-1
-        )
-
-        importance_mean = result.importances_mean
-        importance_std = result.importances_std
-
-        # Warn if too few samples
-        if len(X) < 20:
-            logger.warning(
-                f"Small sample size ({len(X)} samples). Importance estimates may be unreliable."
+            result = permutation_importance(
+                model, X, y, n_repeats=10, random_state=42, n_jobs=-1
             )
 
-        analysis = _create_analysis_output(
-            experiment, vectors[0], importance_mean, importance_std
-        )
+            importance_mean = result.importances_mean
+            importance_std = result.importances_std
+
+            # Warn if too few samples
+            if len(X) < 20:
+                logger.warning(
+                    f"Small sample size ({len(X)} samples). Importance estimates may be unreliable."
+                )
+
+            analysis = _create_analysis_output(
+                experiment, sample_vector, importance_mean, importance_std
+            )
 
     analysis["statistics"] = _compute_statistics(valid_results, experiment)
 
@@ -107,18 +122,7 @@ def _create_analysis_output(
     importance_mean: np.ndarray,
     importance_std: np.ndarray,
 ) -> Dict:
-    """
-    Create the analysis output dictionary with variable names and importance scores.
-
-    Args:
-        experiment: Experiment instance for variable metadata
-        sample_vector: A sample variable vector to determine number of variables
-        importance_mean: Array of mean importance values
-        importance_std: Array of std importance values
-
-    Returns:
-        Dictionary with analysis results
-    """
+    """Build the JSON-ready importance payload for each variable."""
     num_vars = len(sample_vector)
     variable_names = [f"var_{i+1}" for i in range(num_vars)]
 
@@ -145,13 +149,7 @@ def _compute_statistics(
     valid_results: SearchSpace,
     experiment: Experiment,
 ) -> Dict:
-    """
-    Compute benchmark statistics from an evaluated search space.
-
-    Returns a dictionary containing summary statistics (min, max, mean, median),
-    IQR-based outlier groups with the configurations that produced them, and
-    coverage of the search space.
-    """
+    """Compute summary stats, outliers, and search-space coverage."""
     times = np.array(list(valid_results.values()), dtype=np.float64)
     vectors: List[VariableVector] = list(valid_results.keys())
 

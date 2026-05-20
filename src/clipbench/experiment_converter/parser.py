@@ -2,10 +2,10 @@ from dataclasses import dataclass, field
 from typing import List, Union
 from xml.etree import ElementTree as ET
 
+"""XML parser that converts experiment files into internal model objects."""
+
 from clipbench.experiment.variable.int_var import IntVar
 from clipbench.experiment.variable.float_var import FloatVar
-from clipbench.experiment.variable.toggleable_string_var import ToggleableStringVar
-from clipbench.experiment.variable.string_list_var import StringListVar, StringListType
 from clipbench.experiment.variable.variable import Variable
 
 
@@ -17,6 +17,7 @@ class Static:
 
     @classmethod
     def from_xml(cls, element: ET.Element) -> "Static":
+        """Build a Static part from a <Static> XML element."""
         text = element.text.strip() if element.text else ""
         return cls(text=text)
 
@@ -31,6 +32,7 @@ class Dynamic:
 
     @classmethod
     def from_xml(cls, element: ET.Element) -> "Dynamic":
+        """Build a Dynamic part from a <Dynamic> XML element."""
         prefix = element.attrib.get("prefix", "")
         suffix = element.attrib.get("suffix", "")
 
@@ -52,10 +54,6 @@ def parse_variable(element: ET.Element) -> Variable:
         return Int.from_xml(element)
     elif element.tag == "Float":
         return Float.from_xml(element)
-    elif element.tag == "ToggleableString":
-        return ToggleableString.from_xml(element)
-    elif element.tag == "StringList":
-        return StringList.from_xml(element)
     else:
         raise ValueError(f"Unknown variable type: {element.tag}")
 
@@ -70,6 +68,7 @@ class Int:
 
     @classmethod
     def from_xml(cls, element: ET.Element) -> IntVar:
+        """Parse an <Int> element into an IntVar instance."""
         min_val = int(element.attrib["min"])
         max_val = int(element.attrib["max"])
         step = int(element.attrib.get("step", 1))
@@ -86,56 +85,11 @@ class Float:
 
     @classmethod
     def from_xml(cls, element: ET.Element) -> FloatVar:
+        """Parse a <Float> element into a FloatVar instance."""
         min_val = float(element.attrib["min"])
         max_val = float(element.attrib["max"])
         accuracy = float(element.attrib.get("step", element.attrib.get("accuracy", 1e-2)))
         return FloatVar(min=min_val, max=max_val, accuracy=accuracy)
-
-
-@dataclass
-class ToggleableString:
-    """ToggleableString variable binding."""
-
-    value: str = field(metadata={"xml": "attribute"})
-
-    @classmethod
-    def from_xml(cls, element: ET.Element) -> ToggleableStringVar:
-        value = element.attrib["value"]
-        return ToggleableStringVar(string=value)
-
-
-@dataclass
-class StringList:
-    """StringList variable binding."""
-
-    type: str = field(metadata={"xml": "attribute"})
-    variation_n: int = field(default=0, metadata={"xml": "attribute"})
-    items: List[str] = field(default_factory=list, metadata={"xml": "element"})
-
-    @classmethod
-    def from_xml(cls, element: ET.Element) -> StringListVar:
-        type_str = element.attrib["type"]
-        variation_n = int(element.attrib.get("variation_n", 0))
-
-        # Parse type
-        if type_str == "CASCADE":
-            list_type = StringListType.CASCADE
-        elif type_str == "VARIATIONS":
-            list_type = StringListType.VARIATIONS
-        else:
-            raise ValueError(f"Unknown StringList type: {type_str}")
-
-        # Parse items
-        items = []
-        for item in element:
-            if item.tag == "Item":
-                items.append(item.text.strip() if item.text else "")
-            else:
-                raise ValueError(
-                    f"StringList can only contain Item elements, found: {item.tag}"
-                )
-
-        return StringListVar(string_list=items, type=list_type, variation_n=variation_n)
 
 
 @dataclass
@@ -148,6 +102,7 @@ class Parts:
 
     @classmethod
     def from_xml(cls, element: ET.Element) -> "Parts":
+        """Parse the <Parts> root and all child part elements."""
         if element.tag != "Parts":
             raise ValueError("Root element must be 'Parts'")
 

@@ -1,9 +1,12 @@
 import json
 
+"""Load JSON configuration files into validated Configuration objects."""
+
 from clipbench.configuration.configuration import ConfigurationBuilder, Configuration
 
 
 def provide_configuration(config_path: str) -> Configuration:
+    """Read a JSON config file and build a validated Configuration."""
     with open(config_path, "r") as f:
         config_dict = json.load(f)
 

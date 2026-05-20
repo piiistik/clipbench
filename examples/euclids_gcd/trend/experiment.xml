@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Parts>
     <Static>
-        .\bin\euclids_gcd_broken.exe
+        build\euclids_gcd_broken.exe
     </Static>
     
     <Dynamic prefix="--a ">

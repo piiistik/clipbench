@@ -1,5 +1,7 @@
 from typing import List
 
+"""Create Experiment instances from XML experiment definitions."""
+
 from clipbench.experiment_converter.parser import parse_xml, Static, Dynamic, Parts
 from clipbench.experiment.experiment import Experiment
 from clipbench.experiment.command_builder import CommandBuilder
@@ -8,6 +10,8 @@ from clipbench.experiment.variable.variable import Variable
 
 
 class _WrappedDynamicVariable(Variable):
+    """Decorate a variable with optional prefix/suffix command fragments."""
+
     def __init__(self, variable: Variable, prefix: str, suffix: str):
         self._variable = variable
         self._prefix = prefix
@@ -22,6 +26,7 @@ class _WrappedDynamicVariable(Variable):
 
 
 def provide_experiment(xml_path: str) -> Experiment:
+    """Parse an XML experiment file and return a ready-to-run Experiment."""
     command_builder = CommandBuilder()
     variables: List[Variable] = []
 

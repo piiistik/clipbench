@@ -1,20 +1,15 @@
 from typing import Callable, Dict, Tuple
 import csv
 
+"""Write benchmark results to CSV files."""
+
 
 def save_result(
     results: Dict[Tuple[int, ...], float | None],
     csv_file: str,
     vector_to_values: Callable[[Tuple[int, ...]], Tuple[str, ...]] | None = None,
 ) -> None:
-    """
-    Save results to a CSV file with time as floats and variables as integers.
-
-    Args:
-        results: Dictionary mapping tuples of variable values to time results
-        csv_file: Path to the output CSV file
-        vector_to_values: Optional converter from variable index vector to display values
-    """
+    """Save results to CSV, optionally including display values per variable."""
     if not results:
         return
 

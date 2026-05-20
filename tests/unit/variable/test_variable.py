@@ -1,7 +1,5 @@
 from clipbench.experiment.variable.int_var import IntVar
 from clipbench.experiment.variable.float_var import FloatVar
-from clipbench.experiment.variable.toggleable_string_var import ToggleableStringVar
-from clipbench.experiment.variable.string_list_var import StringListVar, StringListType
 
 
 def test_int_var():
@@ -24,30 +22,3 @@ def test_float_var():
     assert var.as_string(10) == "1.00"
 
 
-def test_toggleable_string_var():
-    var = ToggleableStringVar("test_string")
-
-    assert var.int_range() == (0, 1)
-
-    assert var.as_string(0) == ""
-    assert var.as_string(1) == "test_string"
-
-
-def test_string_list_var_cascade():
-    var = StringListVar(["a", "b", "c"], StringListType.CASCADE)
-
-    assert var.int_range() == (0, 2)
-
-    assert var.as_string(0) == "[a]"
-    assert var.as_string(1) == "[a, b]"
-    assert var.as_string(2) == "[a, b, c]"
-
-
-def test_string_list_var_variations():
-    var = StringListVar(["a", "b", "c"], StringListType.VARIATIONS, variation_n=2)
-
-    assert var.int_range() == (0, 2)
-
-    assert var.as_string(0) == "[a, b]"
-    assert var.as_string(1) == "[a, c]"
-    assert var.as_string(2) == "[b, c]"

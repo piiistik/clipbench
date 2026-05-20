@@ -1,15 +1,21 @@
 from dataclasses import dataclass
 from typing import Any, Dict
 
+"""Configuration data structures and builder for CLI bench runs."""
+
 
 @dataclass
 class Configuration:
+    """Validated runtime configuration used by the application."""
+
     search_method_configuration: Dict[str, Any]
     command_runner_configuration: Dict[str, Any]
     budget: int
 
 
 class ConfigurationBuilder:
+    """Builder for creating a validated Configuration."""
+
     def __init__(self) -> None:
         self._search_method_configuration: Dict[str, Any]
         self._command_runner_configuration: Dict[str, Any]
@@ -32,6 +38,7 @@ class ConfigurationBuilder:
         return self
 
     def _validate(self) -> None:
+        """Ensure all required fields are present and valid."""
         if not self._search_method_configuration:
             raise ValueError("search_method_configuration must be set and non-empty")
         if not self._command_runner_configuration:
