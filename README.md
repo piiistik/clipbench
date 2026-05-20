@@ -70,6 +70,8 @@ Run tests with:
 
 ```bash
 pytest
+pytest tests/integration
+pytest tests/unit
 ```
 
 Run code formatter with:
