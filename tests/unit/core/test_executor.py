@@ -51,5 +51,7 @@ def test_executor_wires_registry_instances_and_executes(monkeypatch):
 
     result = executor.execute(_FakeExperiment())
 
-    assert fake_search_method.calls == [{"space_definition": ((0, 2), (0, 3)), "budget": 5}]
+    assert fake_search_method.calls == [
+        {"space_definition": ((0, 2), (0, 3)), "budget": 5}
+    ]
     assert result == {(1, 2): 1.0}

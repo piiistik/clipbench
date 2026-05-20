@@ -20,5 +20,3 @@ def test_float_var():
     assert var.as_string(0) == "0.00"
     assert var.as_string(1) == "0.10"
     assert var.as_string(10) == "1.00"
-
-

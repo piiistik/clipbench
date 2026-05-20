@@ -55,7 +55,9 @@ class TrendSearch(SearchMethod):
         self._k_neighbors = max(1, k_neighbors)
         self._max_neighbor_distance = max(0.0, max_neighbor_distance)
         self._max_pairs_per_iteration = max(1, max_pairs_per_iteration)
-        self._steepness_percentile_threshold = max(0.0, min(1.0, steepness_percentile_threshold))
+        self._steepness_percentile_threshold = max(
+            0.0, min(1.0, steepness_percentile_threshold)
+        )
         self._min_effective_distance = max(1e-9, min_effective_distance)
         self._fallback_strategy = fallback_strategy
         self._refine_zone_radius = max(0.0, refine_zone_radius)
@@ -90,7 +92,9 @@ class TrendSearch(SearchMethod):
         if remaining == 0:
             return
 
-        initial_budget = min(max(1, int(target_total * self._budget_fraction_initial)), remaining)
+        initial_budget = min(
+            max(1, int(target_total * self._budget_fraction_initial)), remaining
+        )
 
         before_initial = len(search_space)
         self._sampler.run(space_definition, search_space, evaluator, initial_budget)
@@ -197,7 +201,9 @@ class TrendSearch(SearchMethod):
         space_definition: SpaceDefinition,
     ) -> List[Tuple[float, VariableVector, VariableVector]]:
         """Score evaluated pairs by normalized steepness and return top candidates."""
-        pair_by_key: Dict[Tuple[int, int], Tuple[float, VariableVector, VariableVector]] = {}
+        pair_by_key: Dict[
+            Tuple[int, int], Tuple[float, VariableVector, VariableVector]
+        ] = {}
         per_point_edges: Dict[int, List[Tuple[float, int]]] = {
             i: [] for i in range(len(evaluated))
         }
@@ -303,10 +309,14 @@ class TrendSearch(SearchMethod):
                     break
                 base = anchors[(idx + sample_index) % len(anchors)]
                 candidate = []
-                for value, radius, (lo, hi) in zip(base, radius_by_dim, space_definition):
+                for value, radius, (lo, hi) in zip(
+                    base, radius_by_dim, space_definition
+                ):
                     low = max(lo, value - radius)
                     high = min(hi, value + radius)
-                    candidate.append(self._fallback_sampler._generator.randint(low, high))
+                    candidate.append(
+                        self._fallback_sampler._generator.randint(low, high)
+                    )
                 vec = tuple(candidate)
                 if vec in search_space or vec in seen:
                     continue
@@ -353,7 +363,9 @@ def factory_trend_search(configuration: dict) -> TrendSearch:
         k_neighbors=configuration.get("k_neighbors", 4),
         max_neighbor_distance=configuration.get("max_neighbor_distance", 0.3),
         max_pairs_per_iteration=configuration.get("max_pairs_per_iteration", 20),
-        steepness_percentile_threshold=configuration.get("steepness_percentile_threshold", 0.5),
+        steepness_percentile_threshold=configuration.get(
+            "steepness_percentile_threshold", 0.5
+        ),
         min_effective_distance=configuration.get("min_effective_distance", 0.02),
         fallback_strategy=configuration.get("fallback_strategy", "refine"),
         refine_zone_radius=configuration.get("refine_zone_radius", 0.12),

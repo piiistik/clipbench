@@ -1,4 +1,7 @@
-from clipbench.core.search_method.local_extrema_search import LocalExtremaSearch, SearchTarget
+from clipbench.core.search_method.local_extrema_search import (
+    LocalExtremaSearch,
+    SearchTarget,
+)
 import math
 
 

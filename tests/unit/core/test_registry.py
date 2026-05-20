@@ -10,7 +10,9 @@ def test_register_and_get_search_method_instance():
         def _factory(configuration):
             return {"kind": "search", "configuration": configuration}
 
-        result = registry.get_registered_instance_of_search_method({"name": "dummy_search", "x": 1})
+        result = registry.get_registered_instance_of_search_method(
+            {"name": "dummy_search", "x": 1}
+        )
 
         assert result["kind"] == "search"
         assert result["configuration"]["x"] == 1
@@ -28,7 +30,9 @@ def test_register_and_get_command_runner_instance():
         def _factory(configuration):
             return {"kind": "runner", "configuration": configuration}
 
-        result = registry.get_registered_instance_of_command_runner({"name": "dummy_runner", "y": 2})
+        result = registry.get_registered_instance_of_command_runner(
+            {"name": "dummy_runner", "y": 2}
+        )
 
         assert result["kind"] == "runner"
         assert result["configuration"]["y"] == 2

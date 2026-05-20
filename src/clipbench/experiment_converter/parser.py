@@ -88,7 +88,9 @@ class Float:
         """Parse a <Float> element into a FloatVar instance."""
         min_val = float(element.attrib["min"])
         max_val = float(element.attrib["max"])
-        accuracy = float(element.attrib.get("step", element.attrib.get("accuracy", 1e-2)))
+        accuracy = float(
+            element.attrib.get("step", element.attrib.get("accuracy", 1e-2))
+        )
         return FloatVar(min=min_val, max=max_val, accuracy=accuracy)
 
 

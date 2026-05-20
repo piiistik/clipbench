@@ -3,7 +3,9 @@ import json
 import pytest
 
 from clipbench.configuration.configuration import Configuration
-from clipbench.configuration_converter.configuration_provider import provide_configuration
+from clipbench.configuration_converter.configuration_provider import (
+    provide_configuration,
+)
 
 
 def test_provide_configuration_reads_valid_json(tmp_path):

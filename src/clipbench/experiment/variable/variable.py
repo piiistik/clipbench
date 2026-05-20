@@ -10,9 +10,10 @@ class Variable(ABC):
     @property
     @abstractmethod
     def int_range(self) -> Tuple[int, int]: ...
-    """Return inclusive integer index bounds as (min, max)."""
 
+    """Return inclusive integer index bounds as (min, max)."""
 
     @abstractmethod
     def as_string(self, index: int) -> str: ...
+
     """Convert an index within range to its command-line string value."""

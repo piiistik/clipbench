@@ -9,24 +9,25 @@ from setuptools.command.build_py import build_py as _build_py
 from setuptools.command.build import build as _build
 from setuptools.command.install import install as _install
 
+
 class build_examples:
     """Build example C programs only."""
-    
+
     @staticmethod
     def compile_examples():
         """Compile all example C programs into build/ directory."""
         bin_out_dir = Path("build")
         bin_out_dir.mkdir(parents=True, exist_ok=True)
-        
+
         if shutil.which("gcc") is None:
-            raise RuntimeError(
-                "gcc compiler not found in PATH; cannot build examples"
-            )
-        
+            raise RuntimeError("gcc compiler not found in PATH; cannot build examples")
+
         example_programs_dir = Path("examples/example_batch_programs")
         if example_programs_dir.exists():
             for c_src in sorted(example_programs_dir.glob("*.c")):
-                out_name = f"{c_src.stem}.exe" if sys.platform == "win32" else c_src.stem
+                out_name = (
+                    f"{c_src.stem}.exe" if sys.platform == "win32" else c_src.stem
+                )
                 out_path = bin_out_dir / out_name
                 print(f"[build_examples] compiling {c_src} -> {out_path}")
                 subprocess.check_call(
@@ -40,7 +41,7 @@ class build_examples:
                         "-lm",
                     ]
                 )
-            
+
             # Make executables on unix
             if sys.platform != "win32":
                 for program in bin_out_dir.glob("*"):
@@ -52,7 +53,7 @@ class build_examples:
 
 class BuildExamplesCommand(_build):
     """Custom build command that does NOT build examples."""
-    
+
     def run(self):
         # Just run normal build, examples are built separately
         super().run()
@@ -139,13 +140,13 @@ class build_py(_build_py):
 
 class InstallCommand(_install):
     """Custom install command that ensures build_py runs first."""
-    
+
     def run(self):
         # Ensure build_py runs before install
         self.run_command("build_py")
         # Then proceed with normal install
         super().run()
-        
+
         # After install, try to copy build/ files to the proper location
         # This is optional - if it fails due to permissions, that's okay
         # The code has fallback paths to find cmd_runner in the source checkout
@@ -153,9 +154,11 @@ class InstallCommand(_install):
         if build_dir.exists():
             try:
                 # Copy to Scripts directory in Python environment
-                scripts_dir = Path(sys.prefix) / ("Scripts" if sys.platform == "win32" else "bin")
+                scripts_dir = Path(sys.prefix) / (
+                    "Scripts" if sys.platform == "win32" else "bin"
+                )
                 scripts_dir.mkdir(parents=True, exist_ok=True)
-                
+
                 for file in build_dir.glob("*"):
                     if file.is_file():
                         dst = scripts_dir / file.name
@@ -167,32 +170,36 @@ class InstallCommand(_install):
                                 dst.chmod(0o755)
                         except (PermissionError, OSError) as e:
                             print(f"[install] warning: could not copy {file.name}: {e}")
-                            print(f"[install] cmd_runner will be found in source checkout during development")
+                            print(
+                                f"[install] cmd_runner will be found in source checkout during development"
+                            )
             except (PermissionError, OSError) as e:
                 print(f"[install] warning: could not copy build files to Scripts: {e}")
-                print(f"[install] cmd_runner will be found in source checkout during development")
+                print(
+                    f"[install] cmd_runner will be found in source checkout during development"
+                )
 
 
 class BuildExamplesCmd(distutils.cmd.Command):
     """Custom command to build only the example C programs."""
-    
+
     description = "build example C programs"
     user_options = []
-    
+
     def initialize_options(self):
         pass
-    
+
     def finalize_options(self):
         pass
-    
+
     def run(self):
         build_examples.compile_examples()
 
 
 setup(
     cmdclass={
-        "build_py": build_py, 
-        "build": BuildExamplesCommand, 
+        "build_py": build_py,
+        "build": BuildExamplesCommand,
         "build_examples": BuildExamplesCmd,
         "install": InstallCommand,
     }

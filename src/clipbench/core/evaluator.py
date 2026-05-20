@@ -24,10 +24,12 @@ class Evaluator:
 
     def evaluate(self, variable_vectors: List[VariableVector]):
         """Run commands for variable vectors and persist the returned results."""
+        print(f"Evaluating {len(variable_vectors)} variable vectors...")
         commands = [
             self._experiment.build_command(vector) for vector in variable_vectors
         ]
         results = self._command_runner.run(commands)
+        print(f"Evaluation completed for {len(variable_vectors)} variable vectors.")
 
         for vector, result in zip(variable_vectors, results):
             self._space[vector] = result

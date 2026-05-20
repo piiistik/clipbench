@@ -18,10 +18,8 @@ def main():
     base = Path(args.path)
 
     experiment = provide_experiment(base / "experiment.xml")
-    print(experiment.get_search_space_definition())
 
     configuration = provide_configuration(base / "configuration.json")
-    print(configuration)
 
     executor = Executor(configuration)
     searched = executor.execute(experiment)

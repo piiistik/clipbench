@@ -4,7 +4,10 @@ import tempfile
 from unittest.mock import Mock
 import pytest
 
-from clipbench.result_converter.analysis_generator import save_analysis, _compute_statistics
+from clipbench.result_converter.analysis_generator import (
+    save_analysis,
+    _compute_statistics,
+)
 
 
 class MockExperiment:
@@ -207,6 +210,7 @@ def test_save_analysis_with_negative_sentinel_values():
 # _compute_statistics unit tests
 # ---------------------------------------------------------------------------
 
+
 class MockExperimentForStats:
     """Mock experiment with configurable space definition for statistics tests."""
 
@@ -344,6 +348,7 @@ def test_statistics_low_outliers_sorted_by_time_ascending():
 
 def test_statistics_outlier_threshold_values():
     import numpy as np
+
     values = [1.0 + i * 0.1 for i in range(10)]
     arr = np.array(values)
     q1, q3 = np.percentile(arr, [25, 75])

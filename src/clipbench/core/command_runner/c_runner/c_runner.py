@@ -171,7 +171,8 @@ class CRunner(CommandRunner):
         ] * self._overhead_measurement_runs
         calibration_results = self._execute_batch(calibration_commands)
         valid_results = [
-            value for value in calibration_results
+            value
+            for value in calibration_results
             if value != TIMEOUT_SENTINEL and value != ERROR_SENTINEL
         ]
 

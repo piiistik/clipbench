@@ -129,14 +129,26 @@ def test_trend_search_refine_is_more_focused_than_random_fallback_mode():
         "min_effective_distance": 0.02,
         "sampler_type": "random_sample",
     }
-    refine_space = _run(fallback_strategy="refine", refine_zone_radius=0.1, refine_zone_sample_count=5, **common)
+    refine_space = _run(
+        fallback_strategy="refine",
+        refine_zone_radius=0.1,
+        refine_zone_sample_count=5,
+        **common,
+    )
     random_space = _run(fallback_strategy="random", **common)
 
-    assert _diagonal_band_ratio(refine_space, width=2) > _diagonal_band_ratio(random_space, width=2)
+    assert _diagonal_band_ratio(refine_space, width=2) > _diagonal_band_ratio(
+        random_space, width=2
+    )
 
 
 def test_trend_search_midpoint_collapse_uses_guided_candidates():
-    method = TrendSearch(seed=5, fallback_strategy="refine", refine_zone_radius=0.2, refine_zone_sample_count=4)
+    method = TrendSearch(
+        seed=5,
+        fallback_strategy="refine",
+        refine_zone_radius=0.2,
+        refine_zone_sample_count=4,
+    )
     scored_pairs = [(12.0, (5, 5), (6, 5))]
 
     direct = method._compute_refinement_candidates(scored_pairs)

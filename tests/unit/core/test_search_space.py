@@ -1,4 +1,9 @@
-from clipbench.core.search_space import Evaluation, SearchSpace, SpaceDefinition, VariableVector
+from clipbench.core.search_space import (
+    Evaluation,
+    SearchSpace,
+    SpaceDefinition,
+    VariableVector,
+)
 
 
 def test_search_space_type_aliases_are_importable():

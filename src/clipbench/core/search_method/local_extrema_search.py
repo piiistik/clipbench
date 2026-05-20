@@ -157,16 +157,21 @@ class LocalExtremaSearch(SearchMethod):
         if target_budget <= 0:
             return 0
 
-        n_new = min(target_budget, max(0, int(len(candidates) * self._spread_of_search)))
+        n_new = min(
+            target_budget, max(0, int(len(candidates) * self._spread_of_search))
+        )
         new_candidates = [
-            self._random_sampler._generate_vector(space_definition) for _ in range(n_new)
+            self._random_sampler._generate_vector(space_definition)
+            for _ in range(n_new)
         ]
         all_candidates = candidates + new_candidates
         if not all_candidates:
             return 0
 
         # Favor top-ranked incumbents while still allowing exploration around random additions.
-        rank_weights = [max(1, len(all_candidates) - rank) for rank in range(len(all_candidates))]
+        rank_weights = [
+            max(1, len(all_candidates) - rank) for rank in range(len(all_candidates))
+        ]
         cumulative_weights = []
         running = 0
         for weight in rank_weights:
@@ -201,6 +206,7 @@ class LocalExtremaSearch(SearchMethod):
             vector.append(self._random_sampler._generator.randint(low, high))
         return tuple(vector)
 
+
 @register_instance("local_extrema_search")
 def factory_local_extrema_search(configuration: dict) -> LocalExtremaSearch:
     """Create LocalExtremaSearch from configuration with documented defaults."""
@@ -209,7 +215,9 @@ def factory_local_extrema_search(configuration: dict) -> LocalExtremaSearch:
         seed=configuration.get("random_seed"),
         search_target=SearchTarget(configuration.get("search_target", "min")),
         number_of_iterations=configuration.get("number_of_iterations", 10),
-        budget_fraction_per_iteration=configuration.get("budget_fraction_per_iteration", 0.1),
+        budget_fraction_per_iteration=configuration.get(
+            "budget_fraction_per_iteration", 0.1
+        ),
         spread_of_search=configuration.get("spread_of_search", 1.0),
         localization_radius=configuration.get("localization_radius", 0.1),
         candidate_pool_ratio=configuration.get("candidate_pool_ratio", 0.25),

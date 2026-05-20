@@ -26,7 +26,6 @@ class GridSample(SearchMethod):
         grid_points = self._build_grid(space_definition, budget)
 
         if grid_points:
-            print(f"Evaluating {len(grid_points)} grid points...")
             evaluator.evaluate(grid_points)
 
     def _build_grid(

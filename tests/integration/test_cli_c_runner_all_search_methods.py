@@ -8,7 +8,9 @@ from pathlib import Path
 import pytest
 
 
-@pytest.mark.skipif(sys.platform != "win32", reason="c_runner integration tests are Windows-only")
+@pytest.mark.skipif(
+    sys.platform != "win32", reason="c_runner integration tests are Windows-only"
+)
 class TestCliCRunnerAllSearchMethods:
     def _repo_root(self) -> Path:
         return Path(__file__).resolve().parents[2]
@@ -71,7 +73,9 @@ class TestCliCRunnerAllSearchMethods:
         with result_csv.open("r", encoding="utf-8", newline="") as handle:
             rows = list(csv.reader(handle))
 
-        assert len(rows) >= 2, "result.csv should contain header and at least one data row"
+        assert (
+            len(rows) >= 2
+        ), "result.csv should contain header and at least one data row"
         assert rows[0], "result.csv header should not be empty"
         for row in rows[1:]:
             assert row, "result.csv data rows should not be empty"

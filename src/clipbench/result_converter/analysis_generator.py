@@ -69,7 +69,9 @@ def save_analysis(
         y = np.log1p(y)
 
         if np.std(y) == 0:
-            logger.warning("No variance in analyzable results. Setting all importances to zero.")
+            logger.warning(
+                "No variance in analyzable results. Setting all importances to zero."
+            )
             num_vars = len(sample_vector)
             analysis = _create_analysis_output(
                 experiment, sample_vector, np.zeros(num_vars), np.zeros(num_vars)
@@ -130,7 +132,9 @@ def _create_analysis_output(
     total = np.sum(importance_mean)
     if total > 0:
         importance_mean_normalized = importance_mean / total
-        importance_std_normalized = importance_std / total if total > 0 else importance_std
+        importance_std_normalized = (
+            importance_std / total if total > 0 else importance_std
+        )
     else:
         importance_mean_normalized = importance_mean
         importance_std_normalized = importance_std
@@ -195,11 +199,15 @@ def _compute_statistics(
         "low_outliers": {
             "count": len(low_pairs),
             "threshold": low_threshold,
-            "configs": [_config_entry(v, t) for v, t in low_pairs[:_MAX_OUTLIER_CONFIGS]],
+            "configs": [
+                _config_entry(v, t) for v, t in low_pairs[:_MAX_OUTLIER_CONFIGS]
+            ],
         },
         "high_outliers": {
             "count": len(high_pairs),
             "threshold": high_threshold,
-            "configs": [_config_entry(v, t) for v, t in high_pairs[:_MAX_OUTLIER_CONFIGS]],
+            "configs": [
+                _config_entry(v, t) for v, t in high_pairs[:_MAX_OUTLIER_CONFIGS]
+            ],
         },
     }

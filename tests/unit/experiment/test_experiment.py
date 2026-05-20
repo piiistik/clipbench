@@ -19,7 +19,10 @@ def test_get_variable_values_delegates_to_variable_handler():
 
 def test_build_command_uses_command_builder_with_variable_values():
     command_builder = (
-        CommandBuilder().add_static_part("python").add_static_part("app.py").add_variable_placeholder()
+        CommandBuilder()
+        .add_static_part("python")
+        .add_static_part("app.py")
+        .add_variable_placeholder()
     )
     handler = VariableHandler([IntVar(7, 9)])
     experiment = Experiment(command_builder, handler)
