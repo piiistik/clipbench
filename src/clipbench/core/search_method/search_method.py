@@ -1,9 +1,13 @@
+"""Abstract interface for budgeted search algorithms over experiment spaces."""
+
 from abc import ABC, abstractmethod
 from clipbench.core.search_space import SearchSpace, SpaceDefinition
 from clipbench.core.evaluator import Evaluator
 
 
 class SearchMethod(ABC):
+    """Contract for search strategies that select vectors to evaluate."""
+
     @abstractmethod
     def run(
         self,
@@ -12,8 +16,5 @@ class SearchMethod(ABC):
         evaluator: Evaluator,
         budget: int,
     ):
-        """
-        Runs the search method on the given experiment within the provided budget.
-        Saves searched space to the provided search_space evaluated by evaluator.
-        """
+        """Run the search within budget and write evaluated vectors to search_space."""
         ...

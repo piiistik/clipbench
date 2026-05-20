@@ -1,3 +1,5 @@
+"""Grid-based sampling search method for bounded integer spaces."""
+
 import itertools
 
 from clipbench.core.search_method.search_method import SearchMethod
@@ -11,11 +13,7 @@ from clipbench.core.registry import (
 
 
 class GridSample(SearchMethod):
-    """
-    Grid search across the integer search space.
-    The grid resolution per variable is determined from the budget,
-    distributing evaluation effort evenly among dimensions.
-    """
+    """Evaluate points from an evenly distributed grid over the search space."""
 
     def run(
         self,
@@ -24,6 +22,7 @@ class GridSample(SearchMethod):
         evaluator: Evaluator,
         budget: int,
     ):
+        """Build grid points from budget and evaluate them in one batch."""
         grid_points = self._build_grid(space_definition, budget)
 
         if grid_points:
@@ -33,7 +32,7 @@ class GridSample(SearchMethod):
     def _build_grid(
         self, space_definition: SpaceDefinition, budget: int
     ) -> list[VariableVector]:
-        """Builds a simple grid with roughly budget points total."""
+        """Build a grid with roughly the requested total number of points."""
         n_vars = len(space_definition)
         if n_vars == 0:
             return []
@@ -53,9 +52,13 @@ class GridSample(SearchMethod):
 
 @register_configuration("grid_sample")
 def configuration_grid_sample() -> dict:
+    """Return configuration metadata for the grid_sample search method."""
+
     return {}
 
 
 @register_instance("grid_sample")
 def factory_grid_sample(_: dict) -> GridSample:
+    """Create a GridSample instance."""
+
     return GridSample()

@@ -1,3 +1,22 @@
+"""Iterative local-extrema search that balances exploitation and exploration.
+
+This strategy starts with a broad initial sampling phase, then repeatedly
+refines around promising candidates while still injecting random proposals.
+Candidate vectors are ranked by objective value according to the selected
+search target (min or max). Later iterations bias sampling toward higher-ranked
+incumbents, but random additions keep the process from collapsing too early
+into narrow neighborhoods.
+
+The algorithm is budget-aware at every step:
+- It spends an initial configurable fraction on global sampling.
+- It allocates remaining budget across iterations.
+- It avoids duplicate evaluations by checking the known search space.
+
+Localized proposals are produced by sampling within a radius around selected
+candidates in each dimension, making the method useful for landscapes where
+good regions are clustered but the global structure is still uncertain.
+"""
+
 from enum import Enum
 import math
 import bisect
@@ -15,11 +34,15 @@ from typing import List, Optional
 
 
 class SearchTarget(Enum):
+    """Optimization direction for ranking candidates."""
+
     MIN = "min"
     MAX = "max"
 
 
 class LocalExtremaSearch(SearchMethod):
+    """Search method that alternates seeded local refinement and random spread."""
+
     def __init__(
         self,
         seed: Optional[int],
@@ -32,6 +55,7 @@ class LocalExtremaSearch(SearchMethod):
         sampler_type: str = "random_sample",
         sampler_config: Optional[dict] = None,
     ):
+        """Configure sampling mix, iteration budget split, and neighborhood radius."""
         self._sampler = self._create_sampler(sampler_type, sampler_config or {}, seed)
         # Always keep a random sampler for localized sampling around candidates
         self._random_sampler = RandomSample(seed)
@@ -45,7 +69,7 @@ class LocalExtremaSearch(SearchMethod):
     def _create_sampler(
         self, sampler_type: str, sampler_config: dict, seed: Optional[int]
     ):
-        """Create appropriate sampler instance based on type."""
+        """Create the initial-iteration sampler from configuration."""
         if sampler_type == "random_sample":
             return RandomSample(sampler_config.get("random_seed", seed))
         elif sampler_type == "grid_sample":
@@ -60,6 +84,7 @@ class LocalExtremaSearch(SearchMethod):
         evaluator: Evaluator,
         budget: int,
     ):
+        """Run staged search iterations until budget is exhausted or stalled."""
         remaining_budget = budget
 
         first_budget = max(1, int(budget * self._budget_fraction_per_iteration))
@@ -92,6 +117,7 @@ class LocalExtremaSearch(SearchMethod):
         search_space: SearchSpace,
         max_candidates: Optional[int] = None,
     ) -> List[VariableVector]:
+        """Return evaluated vectors ordered by objective quality."""
         evaluated = [(v, e) for v, e in search_space.items() if e is not None]
         reverse = self._search_target == SearchTarget.MAX
         evaluated.sort(key=lambda x: x[1], reverse=reverse)
@@ -107,6 +133,7 @@ class LocalExtremaSearch(SearchMethod):
         evaluator: Evaluator,
         budget: int,
     ) -> int:
+        """Run the initial global sampling pass and return used budget."""
         sample_budget = budget
         before = len(search_space)
         self._sampler.run(space_definition, search_space, evaluator, sample_budget)
@@ -120,6 +147,7 @@ class LocalExtremaSearch(SearchMethod):
         budget: int,
         candidates: List[VariableVector],
     ) -> int:
+        """Sample around ranked candidates and evaluate new unique vectors."""
         if budget <= 0 or not candidates:
             return 0
 
@@ -164,6 +192,7 @@ class LocalExtremaSearch(SearchMethod):
     def _sample_around(
         self, candidate: VariableVector, space_definition: SpaceDefinition
     ) -> VariableVector:
+        """Sample one vector inside the local neighborhood of a candidate."""
         vector = []
         for value, (min_val, max_val) in zip(candidate, space_definition):
             radius = int(self._localization_radius * (max_val - min_val))
@@ -174,6 +203,8 @@ class LocalExtremaSearch(SearchMethod):
 
 @register_instance("local_extrema_search")
 def factory_local_extrema_search(configuration: dict) -> LocalExtremaSearch:
+    """Create LocalExtremaSearch from configuration with documented defaults."""
+
     return LocalExtremaSearch(
         seed=configuration.get("random_seed"),
         search_target=SearchTarget(configuration.get("search_target", "min")),
@@ -189,6 +220,8 @@ def factory_local_extrema_search(configuration: dict) -> LocalExtremaSearch:
 
 @register_configuration("local_extrema_search")
 def configuration_local_extrema_search() -> dict:
+    """Return configuration metadata for the local_extrema_search method."""
+
     return {
         "random_seed": {
             "type": "int",

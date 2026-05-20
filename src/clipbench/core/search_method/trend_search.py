@@ -1,3 +1,18 @@
+"""Trend-focused search that refines along steep value transitions.
+
+This method targets ridge-like or boundary-like structure in the objective
+landscape by repeatedly analyzing already evaluated points and prioritizing
+pairs with high value contrast per unit distance. It starts with a broad
+initial spread, then performs bisection-style refinement between steep pairs,
+which helps allocate budget toward regions where the response changes quickly.
+
+When bisection candidates are insufficient, the strategy falls back to guided
+zone refinement (or random completion) so iterations keep producing new points
+without violating uniqueness constraints in the discrete search space. The
+overall process is budget-aware and iteration-aware, balancing exploration,
+structure discovery, and local densification.
+"""
+
 import math
 import itertools
 from typing import Dict, List, Optional, Tuple
@@ -14,11 +29,7 @@ from clipbench.core.search_method.grid_sample import GridSample
 
 
 class TrendSearch(SearchMethod):
-    """
-    Bisection-based ridge finder. Prioritizes sampling between evaluated point
-    pairs that have the steepest value difference relative to their distance,
-    iteratively narrowing in on regions of rapid change (ridges / sharp transitions).
-    """
+    """Search for steep trends by bisecting high-contrast evaluated pairs."""
 
     def __init__(
         self,
@@ -36,6 +47,7 @@ class TrendSearch(SearchMethod):
         sampler_type: str = "random_sample",
         sampler_config: Optional[dict] = None,
     ):
+        """Configure initial sampling, pair scoring, and fallback refinement behavior."""
         self._sampler = self._create_sampler(sampler_type, sampler_config or {}, seed)
         self._fallback_sampler = RandomSample(seed)
         self._number_of_iterations = number_of_iterations
@@ -52,6 +64,7 @@ class TrendSearch(SearchMethod):
     def _create_sampler(
         self, sampler_type: str, sampler_config: dict, seed: Optional[int]
     ):
+        """Create the sampler used for the initial spread phase."""
         if sampler_type == "random_sample":
             return RandomSample(sampler_config.get("random_seed", seed))
         elif sampler_type == "grid_sample":
@@ -66,6 +79,7 @@ class TrendSearch(SearchMethod):
         evaluator: Evaluator,
         budget: int,
     ):
+        """Run initial spread and iterative trend-guided refinement within budget."""
         if budget <= 0:
             return
 
@@ -109,6 +123,7 @@ class TrendSearch(SearchMethod):
         evaluator: Evaluator,
         budget: int,
     ):
+        """Execute one refinement round using steep pair bisection candidates."""
         evaluated = [(v, e) for v, e in search_space.items() if e is not None]
 
         if len(evaluated) < 2:
@@ -141,7 +156,7 @@ class TrendSearch(SearchMethod):
         evaluator: Evaluator,
         budget: int,
     ):
-        """Sample random unique vectors up to budget, stopping if the space is exhausted."""
+        """Fill remaining budget with unique random points when needed."""
         max_points = math.prod((hi - lo + 1) for lo, hi in space_definition)
         available_points = max(0, max_points - len(search_space))
         target_budget = min(budget, available_points)
@@ -172,6 +187,7 @@ class TrendSearch(SearchMethod):
     def _enumerate_all_vectors(
         self, space_definition: SpaceDefinition
     ) -> List[VariableVector]:
+        """Enumerate every vector in the discrete search space."""
         ranges = [range(lo, hi + 1) for lo, hi in space_definition]
         return list(itertools.product(*ranges))
 
@@ -180,6 +196,7 @@ class TrendSearch(SearchMethod):
         evaluated: List[Tuple[VariableVector, float]],
         space_definition: SpaceDefinition,
     ) -> List[Tuple[float, VariableVector, VariableVector]]:
+        """Score evaluated pairs by normalized steepness and return top candidates."""
         pair_by_key: Dict[Tuple[int, int], Tuple[float, VariableVector, VariableVector]] = {}
         per_point_edges: Dict[int, List[Tuple[float, int]]] = {
             i: [] for i in range(len(evaluated))
@@ -223,6 +240,7 @@ class TrendSearch(SearchMethod):
     def _compute_refinement_candidates(
         self, scored_pairs: List[Tuple[float, VariableVector, VariableVector]]
     ) -> List[VariableVector]:
+        """Generate midpoint and near-midpoint vectors from selected steep pairs."""
         candidates = []
         seen = set()
         for _, p, q in scored_pairs:
@@ -261,6 +279,7 @@ class TrendSearch(SearchMethod):
         search_space: SearchSpace,
         budget: int,
     ) -> List[VariableVector]:
+        """Sample additional points around steep zones to extend refinement."""
         if budget <= 0 or not scored_pairs:
             return []
 
@@ -297,6 +316,7 @@ class TrendSearch(SearchMethod):
         return vectors
 
     def _percentile(self, values: List[float], percentile: float) -> float:
+        """Return a clamped percentile value from a list of scores."""
         if not values:
             return 0.0
         ordered = sorted(values)
@@ -312,6 +332,7 @@ class TrendSearch(SearchMethod):
         q: VariableVector,
         space_definition: SpaceDefinition,
     ) -> float:
+        """Compute Euclidean distance normalized by per-dimension span."""
         total = 0.0
         for pi, qi, (lo, hi) in zip(p, q, space_definition):
             span = hi - lo
@@ -323,6 +344,8 @@ class TrendSearch(SearchMethod):
 
 @register_instance("trend_search")
 def factory_trend_search(configuration: dict) -> TrendSearch:
+    """Create TrendSearch from configuration with defaults applied."""
+
     return TrendSearch(
         seed=configuration.get("random_seed"),
         number_of_iterations=configuration.get("number_of_iterations", 10),
@@ -342,6 +365,8 @@ def factory_trend_search(configuration: dict) -> TrendSearch:
 
 @register_configuration("trend_search")
 def configuration_trend_search() -> dict:
+    """Return configuration metadata for the trend_search method."""
+
     return {
         "random_seed": {
             "type": "int",

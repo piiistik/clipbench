@@ -1,3 +1,5 @@
+"""Command runner backed by the compiled cmd_runner helper executable."""
+
 from clipbench.core.registry import (
     register_command_runner as register_instance,
     register_command_runner_configuration as register_configuration,
@@ -17,9 +19,7 @@ OVERHEAD_CALIBRATION_COMMAND = "echo"
 
 
 def _get_cmd_runner_path():
-    """
-    Return the absolute path to cmd_runner executable installed in the build folder.
-    """
+    """Resolve the cmd_runner executable path from supported install layouts."""
     name = "cmd_runner.exe" if sys.platform == "win32" else "cmd_runner"
 
     candidates = [
@@ -42,19 +42,22 @@ def _get_cmd_runner_path():
 
 
 def write_commands_to_file(commands: List[str], filepath: str):
-    """Utility function to write commands to a temporary file."""
+    """Write one command per line to a UTF-8 text file."""
     with open(filepath, "w", encoding="utf-8") as f:
         for cmd in commands:
             f.write(cmd + "\n")
 
 
 class CRunner(CommandRunner):
+    """Execute command batches through cmd_runner and return timing-like scores."""
+
     def __init__(
         self,
         timeout: Optional[float] = None,
         timeout_seconds: Optional[float] = None,
         overhead_measurement_runs: int = 0,
     ):
+        """Configure batch timeout, per-command timeout, and overhead calibration."""
         super().__init__()
         # Outer timeout for the whole batch communication.
         self._timeout = timeout
@@ -66,9 +69,7 @@ class CRunner(CommandRunner):
         self._command_overhead: Optional[float] = None
 
     def _execute_batch(self, commands: list[str]) -> list[float]:
-        """
-        Run commands through cmd_runner and return parsed results.
-        """
+        """Run commands via cmd_runner and parse status lines into float results."""
         if not commands:
             return []
 
@@ -157,9 +158,7 @@ class CRunner(CommandRunner):
         return results
 
     def _ensure_command_overhead(self) -> None:
-        """
-        Measure and cache average per-command overhead using simple echo commands.
-        """
+        """Measure and cache average per-command runner overhead if enabled."""
         if self._command_overhead is not None:
             return
 
@@ -184,9 +183,7 @@ class CRunner(CommandRunner):
         self._command_overhead = sum(valid_results) / len(valid_results)
 
     def run(self, commands: list[str]) -> list[float]:
-        """
-        Run a list of shell commands via the cmd_runner binary and return a list of floats.
-        """
+        """Execute commands and return results with calibrated overhead subtracted."""
         if not commands:
             return []
 
@@ -208,6 +205,8 @@ class CRunner(CommandRunner):
 
 @register_configuration("c_runner")
 def configuration_c_runner() -> dict:
+    """Return UI-facing configuration metadata for the c_runner backend."""
+
     return {
         "timeout": {
             "type": "float",
@@ -229,6 +228,8 @@ def configuration_c_runner() -> dict:
 
 @register_instance("c_runner")
 def factory_c_runner(configuration: dict) -> CRunner:
+    """Build a CRunner instance from user configuration with defaults applied."""
+
     defaults = configuration_c_runner()
     default_timeout = defaults["timeout"]["default"]
     default_timeout_seconds = defaults["timeout_seconds"]["default"]
