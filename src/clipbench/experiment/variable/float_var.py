@@ -1,3 +1,5 @@
+"""Floating-point variable implementation using fixed accuracy steps."""
+
 from typing import Tuple
 
 from clipbench.experiment.variable.variable import Variable

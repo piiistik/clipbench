@@ -1,3 +1,5 @@
+"""Evaluator that executes experiment commands and stores objective values."""
+
 from typing import List
 
 from clipbench.core.search_space import VariableVector, SearchSpace
@@ -6,6 +8,8 @@ from clipbench.experiment.experiment import Experiment
 
 
 class Evaluator:
+    """Evaluate variable vectors and cache their results in a search space."""
+
     _experiment: Experiment
     _command_runner: CommandRunner
     _space: SearchSpace
@@ -13,18 +17,13 @@ class Evaluator:
     def __init__(
         self, experiment: Experiment, command_runner: CommandRunner, space: SearchSpace
     ):
+        """Create an evaluator bound to an experiment, runner, and search space."""
         self._experiment = experiment
         self._command_runner = command_runner
         self._space = space
 
     def evaluate(self, variable_vectors: List[VariableVector]):
-        """Evaluate a list of variable vectors within a given search space.
-
-        Args:
-            variable_vectors (List[VariableVector]): _description_
-            space (SearchSpace): _description_
-        """
-        # TODO this depends on order of results from command runner to be same as inputed commands
+        """Run commands for variable vectors and persist the returned results."""
         commands = [
             self._experiment.build_command(vector) for vector in variable_vectors
         ]

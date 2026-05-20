@@ -1,3 +1,5 @@
+"""Executor that wires configuration, search, and evaluation into one run."""
+
 from clipbench.experiment.experiment import Experiment
 from clipbench.configuration.configuration import Configuration
 from clipbench.core.evaluator import Evaluator
@@ -12,7 +14,10 @@ from clipbench.core.search_method.search_method import SearchMethod
 
 
 class Executor:
+    """Coordinate search execution for a single experiment."""
+
     def __init__(self, configuration: Configuration):
+        """Create runner and search method instances from configuration."""
         self._command_runner: CommandRunner = get_registered_instance_of_command_runner(
             configuration.command_runner_configuration
         )
@@ -22,6 +27,7 @@ class Executor:
         self._budget = configuration.budget
 
     def execute(self, experiment: Experiment) -> SearchSpace:
+        """Run the configured search method and return the populated search space."""
         search_space = {}
         evaluator = Evaluator(experiment, self._command_runner, search_space)
         self._search_method.run(

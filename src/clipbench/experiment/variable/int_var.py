@@ -1,3 +1,5 @@
+"""Integer-backed variable implementation with optional step size."""
+
 from typing import Tuple
 
 from clipbench.experiment.variable.variable import Variable
